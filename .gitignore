@@ -1,0 +1,4 @@
+*.tmp
+*.autosave.rbxl
+.DS_Store
+Thumbs.db
