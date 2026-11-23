@@ -68,9 +68,6 @@ local function makeGumShop(model: Model, center: Vector3, world)
 		jar.Transparency=0.12 jar.CanCollide=false
 		orb(shop,"GumDisplay",1.8,base+Vector3.new(x,8.8,3),color,Enum.Material.Neon).CanCollide=false
 	end
-	local promptPart=make(shop,"ShopPromptPart",Vector3.new(2,2,2),CFrame.new(base+Vector3.new(0,3,9)),Color3.new(1,1,1),Enum.Material.SmoothPlastic)
-	promptPart.Transparency=1 promptPart.CanCollide=false
-	local prompt=Instance.new("ProximityPrompt") prompt.Name="ShopPrompt" prompt.ActionText="Browse Gums" prompt.ObjectText="Gum Shop" prompt.HoldDuration=0 prompt.MaxActivationDistance=16 prompt.RequiresLineOfSight=false prompt.Parent=promptPart
 end
 
 for _,world in ipairs(WORLDS) do
