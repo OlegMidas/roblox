@@ -2,6 +2,12 @@
 
 A Roblox bubble simulator built with Luau. The current gameplay foundation includes four generated floating worlds, server-authoritative economy, player XP/levels, gum upgrades, world unlocks, and rebirths. Pets and eggs are intentionally not part of this version.
 
+## Play in Roblox Studio
+
+Download [BubbleGumSimulator.rbxl](BubbleGumSimulator.rbxl), open it in Roblox Studio, and press **Play** (F5). The four islands generate when the server starts. Click or tap to blow a bubble, then use **SELL** or walk onto a marked sell platform. Visit the **GUM SHOP** to buy upgrades.
+
+The place includes the server and client scripts. Local play works without DataStore access, with progress lasting for the current session.
+
 ## Gameplay loop
 
 1. Click or tap to blow a bubble.
@@ -24,39 +30,17 @@ Worlds are generated procedurally by `WorldBuilder.server.luau`. Use the portal 
 
 Rebirth requires Level 20 and 250,000 Coins. It resets Coins, bubble size, gum ownership/equipment, Level, and XP. Unlocked worlds and previous Rebirth count are retained. Each Rebirth adds +0.5 to the coin multiplier.
 
-## Project layout
+## Build the place from source
 
-```
-place.rbxl
-src/
-  client/
-    BubbleClient.luau
-    BubbleHUD.luau
-    GumShopUI.luau
-    ProgressionUI.luau
-    FeedbackUI.luau
-  server/
-    GameServer.luau
-    WorldBuilder.server.luau
+Run this command from the repository root with [Rojo 7.7.1](https://github.com/rojo-rbx/rojo/releases/tag/v7.7.1):
+
+```sh
+rojo build --output BubbleGumSimulator.rbxl
 ```
 
-## Roblox Studio installation
-
-The `.rbxl` file is a binary Studio place. The Luau source files must be installed into the following containers (or synced using your Rojo project):
-
-| File | Roblox location | Class |
-|---|---|---|
-| `src/server/GameServer.luau` | `ServerScriptService/GameServer` | Script |
-| `src/server/WorldBuilder.server.luau` | `ServerScriptService/WorldBuilder` | Script |
-| `src/client/BubbleClient.luau` | `StarterPlayer/StarterPlayerScripts/BubbleClient` | LocalScript |
-| `src/client/BubbleHUD.luau` | `StarterPlayer/StarterPlayerScripts/BubbleHUD` | LocalScript |
-| `src/client/GumShopUI.luau` | `StarterPlayer/StarterPlayerScripts/GumShopUI` | LocalScript |
-| `src/client/ProgressionUI.luau` | `StarterPlayer/StarterPlayerScripts/ProgressionUI` | LocalScript |
-| `src/client/FeedbackUI.luau` | `StarterPlayer/StarterPlayerScripts/FeedbackUI` | LocalScript |
+`default.project.json` maps `src/server/*.server.luau` to Scripts under `ServerScriptService` and `src/client/*.client.luau` to LocalScripts under `StarterPlayer/StarterPlayerScripts`. Use `rojo serve` and the Rojo Studio plugin to sync edits during development. `place.rbxl` is the earlier Studio project.
 
 The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically, including animated gameplay notifications for sales, level-ups, gum upgrades, world unlocks, and Rebirth. WorldBuilder creates `Workspace/BubbleWorld`, four themed islands with paths, lamps, trees/crystals, portal frames, the starter wooden gum-shop kiosk, `ShopZone`, and a marked bubble-selling platform with `SellZone`. The gum shop UI opens when the player enters the shop area; the server independently validates the player's position before accepting a purchase. The XP/level widget is positioned compactly on the left side of the screen. WorldBuilder replaces the generated `BubbleWorld` folder each time the server starts.
-
-**Important:** Do not place `WorldBuilder.server.luau` in Workspace or StarterPlayer. It must run as a server Script under ServerScriptService.
 
 ## DataStore setup
 
