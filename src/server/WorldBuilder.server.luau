@@ -76,6 +76,34 @@ local function makeTree(parent: Instance, pos: Vector3, world, index: number)
 	orb(parent,"TreeCrown",world.Id==2 and 10 or 12,pos+Vector3.new(0,12,0),crownColor,world.Id==3 and Enum.Material.SmoothPlastic or Enum.Material.Grass)
 	if world.Id==1 then orb(parent,"Fruit",2.2,pos+Vector3.new(4,11,0),Color3.fromRGB(255,100,95),Enum.Material.SmoothPlastic) end
 end
+local function makeWorldLandmark(parent: Instance, world, center: Vector3)
+	local position = center + Vector3.new(-5, 3, -28)
+	if world.Id == 2 then
+		for index = 1, 5 do
+			local offset = Vector3.new((index - 3) * 5, 0, (index % 2 == 0) and 2 or -2)
+			local height = 12 + (index % 3) * 5
+			local shard = make(parent, "IceSpire", Vector3.new(4, height, 4), CFrame.new(position + offset + Vector3.new(0, height * 0.5, 0)) * CFrame.Angles(math.rad(5), 0, math.rad((index - 3) * 5)), Color3.fromRGB(155, 235, 255), Enum.Material.Ice)
+			shard.Transparency = 0.12
+			shard.CanCollide = false
+		end
+	elseif world.Id == 3 then
+		for index = 1, 3 do
+			local offset = Vector3.new((index - 2) * 10, 0, 0)
+			make(parent, "CandyStick", Vector3.new(2, 13, 2), CFrame.new(position + offset + Vector3.new(0, 6.5, 0)), Color3.fromRGB(250, 245, 235), Enum.Material.SmoothPlastic).CanCollide = false
+			local candy = orb(parent, "Lollipop", 10, position + offset + Vector3.new(0, 14, 0), index == 2 and Color3.fromRGB(255, 225, 95) or Color3.fromRGB(255, 105, 185), Enum.Material.Neon)
+			candy.CanCollide = false
+		end
+	elseif world.Id == 4 then
+		local planet = orb(parent, "GalaxyPlanet", 15, position + Vector3.new(0, 12, 0), Color3.fromRGB(120, 95, 235), Enum.Material.Neon)
+		planet.CanCollide = false
+		local ring = make(parent, "PlanetRing", Vector3.new(1.2, 25, 25), CFrame.new(position + Vector3.new(0, 12, 0)) * CFrame.Angles(math.rad(18), 0, math.rad(90)), Color3.fromRGB(100, 225, 255), Enum.Material.Neon, Enum.PartType.Cylinder)
+		ring.Transparency = 0.28
+		ring.CanCollide = false
+		local star = orb(parent, "OrbitingStar", 4, position + Vector3.new(15, 18, 0), Color3.fromRGB(255, 245, 145), Enum.Material.Neon)
+		star.CanCollide = false
+	end
+end
+
 local function makeSign(parent: Instance, text: string, pos: Vector3, color: Color3, width: number)
 	make(parent,"SignPost",Vector3.new(1.2,8,1.2),CFrame.new(pos+Vector3.new(0,4,0)),Color3.fromRGB(105,76,53),Enum.Material.Wood)
 	local board=make(parent,"SignBoard",Vector3.new(width,5,0.8),CFrame.new(pos+Vector3.new(0,8,0)),color,Enum.Material.SmoothPlastic)
@@ -166,6 +194,7 @@ for _,world in ipairs(WORLDS) do
 	makeLamp(model,center+Vector3.new(-22,3,-26),world.Accent)
 	makeLamp(model,center+Vector3.new(22,3,-26),world.Accent)
 	makeSign(model,world.Name,center+Vector3.new(0,3,-57),world.Accent,26)
+	makeWorldLandmark(model, world, center)
 
 	if world.Id==1 then
 		makeGumShop(model,center,world)
