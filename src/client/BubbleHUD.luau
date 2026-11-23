@@ -21,7 +21,7 @@ bar.Name = "TopBar"
 bar.AnchorPoint = Vector2.new(0.5, 0)
 bar.Size = UDim2.new(1, -24, 0, 58)
 bar.Position = UDim2.new(0.5, 0, 0, 10)
-bar.BackgroundColor3 = Color3.fromRGB(22, 24, 34)
+bar.BackgroundColor3 = Color3.fromRGB(43, 30, 69)
 bar.BackgroundTransparency = 0.05
 bar.BorderSizePixel = 0
 bar.Parent = gui
@@ -31,13 +31,13 @@ sizeLimit.MaxSize = Vector2.new(640, 58)
 sizeLimit.Parent = bar
 Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 16)
 local barStroke = Instance.new("UIStroke")
-barStroke.Color = Color3.fromRGB(255, 255, 255)
-barStroke.Transparency = 0.88
+barStroke.Color = Color3.fromRGB(190, 149, 255)
+barStroke.Transparency = 0.25
 barStroke.Thickness = 1.5
 barStroke.Parent = bar
 local barGrad = Instance.new("UIGradient")
 barGrad.Rotation = 90
-barGrad.Color = ColorSequence.new(Color3.fromRGB(30, 33, 46), Color3.fromRGB(18, 20, 29))
+barGrad.Color = ColorSequence.new(Color3.fromRGB(75, 47, 115), Color3.fromRGB(40, 26, 65))
 barGrad.Parent = bar
 
 local layout = Instance.new("UIListLayout")
@@ -77,7 +77,7 @@ local function makeChip(name: string, icon: string, accent: Color3, order: numbe
 	iconLabel.Position = UDim2.new(0, 8, 0.5, 0)
 	iconLabel.Size = UDim2.new(0, 26, 0, 26)
 	iconLabel.BackgroundTransparency = 1
-	iconLabel.Font = Enum.Font.GothamBold
+	iconLabel.Font = Enum.Font.FredokaOne
 	iconLabel.TextSize = 18
 	iconLabel.Text = icon
 	iconLabel.TextColor3 = accent
@@ -89,7 +89,7 @@ local function makeChip(name: string, icon: string, accent: Color3, order: numbe
 	value.Position = UDim2.new(1, -10, 0.5, 0)
 	value.Size = UDim2.new(1, -48, 0, 20)
 	value.BackgroundTransparency = 1
-	value.Font = Enum.Font.GothamBold
+	value.Font = Enum.Font.FredokaOne
 	value.TextScaled = true
 	local valueLimit = Instance.new("UITextSizeConstraint")
 	valueLimit.MaxTextSize = 16
@@ -129,7 +129,7 @@ worldChip.Name = "WorldChip"
 worldChip.AnchorPoint = Vector2.new(0.5, 0)
 worldChip.Position = UDim2.new(0.5, 0, 0, 74)
 worldChip.Size = UDim2.new(0, 200, 0, 30)
-worldChip.BackgroundColor3 = Color3.fromRGB(22, 24, 34)
+worldChip.BackgroundColor3 = Color3.fromRGB(43, 30, 69)
 worldChip.BackgroundTransparency = 0.1
 worldChip.BorderSizePixel = 0
 worldChip.Parent = gui
@@ -142,7 +142,7 @@ worldStroke.Parent = worldChip
 local worldLabel = Instance.new("TextLabel")
 worldLabel.Size = UDim2.fromScale(1, 1)
 worldLabel.BackgroundTransparency = 1
-worldLabel.Font = Enum.Font.GothamBold
+worldLabel.Font = Enum.Font.FredokaOne
 worldLabel.TextSize = 13
 worldLabel.TextColor3 = Color3.fromRGB(200, 230, 255)
 worldLabel.Text = "🌍 Grassland"
@@ -173,7 +173,7 @@ local function updateHUD()
 	progressFill.BackgroundColor3 = nearFull and Color3.fromRGB(255, 125, 125) or Color3.fromRGB(120, 215, 255)
 	bubblesValue.TextColor3 = nearFull and Color3.fromRGB(255, 125, 125) or Color3.fromRGB(240, 243, 250)
 
-	worldLabel.Text = config.Worlds[worldId].Name
+	worldLabel.Text = "📍 " .. config.Worlds[worldId].Name
 end
 
 for _, attribute in ipairs({"Coins", "BubbleSize", "MaxBubble", "GumName", "CurrentWorldId"}) do

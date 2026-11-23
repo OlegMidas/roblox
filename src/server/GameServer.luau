@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 
 local config = require(ReplicatedStorage:WaitForChild("GameConfig"))
 local ProfileStore = require(script.Parent:WaitForChild("ProfileStore"))
+local GrasslandHub = require(script.Parent:WaitForChild("GrasslandHub"))
 local AUTOSAVE_INTERVAL = 60
 local SELL_COOLDOWN = 0.5
 local SHOP_COOLDOWN = 0.25
@@ -28,6 +29,7 @@ local islands: {[number]: Island} = {}
 local islandIds: {[Instance]: number} = {}
 local clouds: {[BasePart]: Cloud} = {}
 local routeLengths: {[number]: number} = {}
+local grassland: Model?
 
 local function findPart(parent: Instance, name: string): BasePart
 	local part = parent:FindFirstChild(name, true)
@@ -45,6 +47,7 @@ for _, model in ipairs(worldFolder:GetChildren()) do
 			Sell = findPart(model, "SellZone"),
 		}
 		islandIds[model] = id
+		if id == 1 then grassland = model end
 	end
 end
 
@@ -68,6 +71,9 @@ for id = 1, #config.Worlds do
 	end
 	routeLengths[id] = count
 end
+
+assert(grassland, "Missing Grassland model")
+local rebirthMerchant, hubDialogs = GrasslandHub.build(grassland, islands[1].Spawn)
 
 local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
 if not remotesFolder then
@@ -95,6 +101,7 @@ local sellBubblesEvent = getOrCreateRemote("SellBubbles")
 local shopActionEvent = getOrCreateRemote("ShopAction")
 local worldActionEvent = getOrCreateRemote("WorldAction")
 local rebirthActionEvent = getOrCreateRemote("RebirthAction")
+local openRebirthShop = getOrCreateRemote("OpenRebirthShop")
 local toastEvent = getOrCreateRemote("Toast")
 
 local green = Color3.fromRGB(105, 235, 155)
@@ -281,6 +288,7 @@ local function clearPositionState(player: Player, session: Session)
 	session.InSellZone = false
 	player:SetAttribute("NearShopZone", false)
 	player:SetAttribute("NearSellZone", false)
+	player:SetAttribute("NearRebirthShop", false)
 end
 
 local function teleportToWorld(player: Player, session: Session, worldId: number): boolean
@@ -324,25 +332,39 @@ worldActionEvent.OnServerEvent:Connect(function(player, worldId)
 	travel(player, session, worldId)
 end)
 
+local function atRebirthShop(root: BasePart, worldId: number): boolean
+	return worldId == 1 and (root.Position - rebirthMerchant.Position).Magnitude <= 14
+end
+
 ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt, player: Player)
-	local portal = prompt.Parent
-	if prompt.Name ~= "WorldPrompt" or not prompt.Enabled or not portal or not portal:IsA("BasePart") then return end
+	local anchor = prompt.Parent
+	if not prompt.Enabled or not anchor or not anchor:IsA("BasePart") then return end
 	local session = activeSession(player)
 	local _, root = getCharacter(player)
-	if not session or not root or getIslandId(portal) ~= session.Profile.Data.CurrentWorldId
-		or (root.Position - portal.Position).Magnitude > prompt.MaxActivationDistance + 2 then
+	if not session or not root or getIslandId(anchor) ~= session.Profile.Data.CurrentWorldId
+		or (root.Position - anchor.Position).Magnitude > prompt.MaxActivationDistance + 1 then
 		return
 	end
-	local targetId = portal:GetAttribute("TargetWorldId")
-	if type(targetId) == "number" and islands[targetId] then travel(player, session, targetId) end
+	if prompt.Name == "WorldPrompt" then
+		local targetId = anchor:GetAttribute("TargetWorldId")
+		if type(targetId) == "number" and islands[targetId] then travel(player, session, targetId) end
+	elseif prompt.Name == "HubRebirth" and anchor == rebirthMerchant then
+		openRebirthShop:FireClient(player)
+	elseif hubDialogs[prompt] and canPerform(session, "Talk", 0.8) then
+		notify(player, prompt.ObjectText, hubDialogs[prompt], blue)
+	end
 end)
 
 rebirthActionEvent.OnServerEvent:Connect(function(player)
 	local session = activeSession(player)
 	local _, root, humanoid = getCharacter(player)
-	if not session or not root or not humanoid or not canPerform(session, "Rebirth", REBIRTH_COOLDOWN) then return end
+	if not session or not root or not humanoid then return end
 	local data = session.Profile.Data
-	if data.PlayerLevel < config.RebirthLevel or data.Coins < config.RebirthCoins then return end
+	if not atRebirthShop(root, data.CurrentWorldId) or not canPerform(session, "Rebirth", REBIRTH_COOLDOWN) then return end
+	if data.PlayerLevel < config.RebirthLevel or data.Coins < config.RebirthCoins then
+		notify(player, "REBIRTH SHOP", "Reach level " .. config.RebirthLevel .. " and save " .. config.RebirthCoins .. " coins.", orange)
+		return
+	end
 	data.Rebirths += 1
 	data.Coins = 0
 	data.BubbleSize = 0
@@ -427,6 +449,7 @@ local function updatePosition(player: Player, session: Session)
 	local nearSell = isInZone(root, island.Sell)
 	player:SetAttribute("NearShopZone", nearShop)
 	player:SetAttribute("NearSellZone", nearSell)
+	player:SetAttribute("NearRebirthShop", atRebirthShop(root, data.CurrentWorldId))
 	if nearSell and not session.InSellZone then sellBubble(player, session, root) end
 	session.InSellZone = nearSell
 end
