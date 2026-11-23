@@ -135,7 +135,7 @@ end)
 local function updateShopProximity()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local zone = workspace:FindFirstChild("ShopZone")
+	local zone = workspace:FindFirstChild("ShopZone", true)
 	local shouldBeInside = false
 
 	if root and root:IsA("BasePart") and zone and zone:IsA("BasePart") then
