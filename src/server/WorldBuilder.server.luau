@@ -1,6 +1,47 @@
 --!strict
 -- Four themed low-poly islands plus the starter gum shop. Run from ServerScriptService.
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+
+-- Bright, readable simulator lighting. Replace named effects so Studio reruns stay clean.
+Lighting.ClockTime = 14
+Lighting.Brightness = 2.2
+Lighting.Ambient = Color3.fromRGB(115, 125, 155)
+Lighting.OutdoorAmbient = Color3.fromRGB(145, 155, 180)
+Lighting.GlobalShadows = true
+Lighting.EnvironmentDiffuseScale = 0.4
+Lighting.EnvironmentSpecularScale = 0.65
+for _, effectName in ipairs({"BubbleAtmosphere", "BubbleBloom", "BubbleColor", "BubbleSunRays"}) do
+	local previousEffect = Lighting:FindFirstChild(effectName)
+	if previousEffect then previousEffect:Destroy() end
+end
+local atmosphere = Instance.new("Atmosphere")
+atmosphere.Name = "BubbleAtmosphere"
+atmosphere.Density = 0.22
+atmosphere.Offset = 0.12
+atmosphere.Color = Color3.fromRGB(205, 225, 255)
+atmosphere.Decay = Color3.fromRGB(105, 125, 175)
+atmosphere.Glare = 0.25
+atmosphere.Haze = 1.2
+atmosphere.Parent = Lighting
+local bloom = Instance.new("BloomEffect")
+bloom.Name = "BubbleBloom"
+bloom.Intensity = 0.32
+bloom.Size = 24
+bloom.Threshold = 1.15
+bloom.Parent = Lighting
+local colorGrade = Instance.new("ColorCorrectionEffect")
+colorGrade.Name = "BubbleColor"
+colorGrade.Brightness = 0.025
+colorGrade.Contrast = 0.08
+colorGrade.Saturation = 0.16
+colorGrade.TintColor = Color3.fromRGB(255, 248, 242)
+colorGrade.Parent = Lighting
+local sunRays = Instance.new("SunRaysEffect")
+sunRays.Name = "BubbleSunRays"
+sunRays.Intensity = 0.035
+sunRays.Spread = 0.8
+sunRays.Parent = Lighting
 local old = Workspace:FindFirstChild("BubbleWorld")
 if old then old:Destroy() end
 local root = Instance.new("Folder")
@@ -47,6 +88,34 @@ local function makePortal(parent: Instance, world, pos: Vector3, targetId: numbe
 	for _,x in ipairs({-6,6}) do make(parent,"PortalPost",Vector3.new(2,12,2),CFrame.new(pos+Vector3.new(x,7,0)),world.Accent,Enum.Material.Neon).CanCollide=false end
 	make(parent,"PortalTop",Vector3.new(14,2,2),CFrame.new(pos+Vector3.new(0,13,0)),world.Accent,Enum.Material.Neon).CanCollide=false
 	local prompt=Instance.new("ProximityPrompt") prompt.Name="WorldPrompt" prompt.ActionText=action prompt.ObjectText=WORLDS[targetId].Name prompt.HoldDuration=0.35 prompt.MaxActivationDistance=14 prompt.RequiresLineOfSight=false prompt.Parent=pad
+end
+
+local function makeSellStation(model: Model, center: Vector3, world)
+	local station = Instance.new("Model")
+	station.Name = "SellStation"
+	station.Parent = model
+	local position = center + Vector3.new(42, 2.8, 24)
+	local platform = make(station, "SellPlatform", Vector3.new(1.5, 26, 22), CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
+	platform.Transparency = 0.18
+	platform.CanCollide = true
+	local sign = make(station, "SellSign", Vector3.new(15, 4, 0.8), CFrame.new(center + Vector3.new(42, 8, 35)), world.Accent, Enum.Material.SmoothPlastic)
+	local surface = Instance.new("SurfaceGui")
+	surface.Face = Enum.NormalId.Front
+	surface.CanvasSize = Vector2.new(500, 160)
+	surface.Parent = sign
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = "SELL BUBBLES"
+	label.TextColor3 = Color3.fromRGB(35, 45, 65)
+	label.Font = Enum.Font.GothamBlack
+	label.TextScaled = true
+	label.Parent = surface
+	local zone = make(station, "SellZone", Vector3.new(26, 8, 24), CFrame.new(center + Vector3.new(42, 4, 24)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic)
+	zone.Transparency = 1
+	zone.CanCollide = false
+	zone.CanTouch = true
+	zone.CanQuery = false
 end
 
 local function makeGumShop(model: Model, center: Vector3, world)
@@ -102,14 +171,8 @@ for _,world in ipairs(WORLDS) do
 		makeGumShop(model,center,world)
 		local zone=make(model,"ShopZone",Vector3.new(34,12,28),CFrame.new(center+Vector3.new(-42,6,24)),Color3.new(1,1,1),Enum.Material.SmoothPlastic)
 		zone.Transparency=1 zone.CanCollide=false zone.CanTouch=false
-		local sell=make(model,"SellPlatform",Vector3.new(1.5,26,22),CFrame.new(center+Vector3.new(42,2.8,24))*CFrame.Angles(0,0,math.rad(90)),Color3.fromRGB(65,225,140),Enum.Material.Neon,Enum.PartType.Cylinder)
-		sell.Transparency=0.2
-		local sign=make(model,"SellSign",Vector3.new(15,4,0.8),CFrame.new(center+Vector3.new(42,8,35)),Color3.fromRGB(100,245,165),Enum.Material.SmoothPlastic)
-		local sg=Instance.new("SurfaceGui") sg.Face=Enum.NormalId.Front sg.CanvasSize=Vector2.new(500,160) sg.Parent=sign
-		local txt=Instance.new("TextLabel") txt.Size=UDim2.fromScale(1,1) txt.BackgroundTransparency=1 txt.Text="SELL BUBBLES" txt.TextColor3=Color3.fromRGB(25,60,45) txt.Font=Enum.Font.GothamBlack txt.TextScaled=true txt.Parent=sg
-		local sellZone=make(model,"SellZone",Vector3.new(26,8,24),CFrame.new(center+Vector3.new(42,4,24)),Color3.fromRGB(70,255,150),Enum.Material.Neon)
-		sellZone.Transparency=1 sellZone.CanCollide=false sellZone.CanTouch=true
 	end
+	makeSellStation(model, center, world)
 	if world.Id<#WORLDS then makePortal(model,world,center+Vector3.new(52,4,0),world.Id+1,"Unlock / Travel") end
 	if world.Id>1 then makePortal(model,world,center+Vector3.new(-52,4,0),world.Id-1,"Travel Back") end
 end
