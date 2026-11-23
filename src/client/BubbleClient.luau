@@ -70,7 +70,7 @@ if player.Character then
 	if hum then hookHumanoid(hum) end
 end
 player.CharacterAdded:Connect(function(char)
-	local hum = char:WaitForChildOfClass("Humanoid", 5)
+	local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
 	if hum then hookHumanoid(hum) end
 end)
 
