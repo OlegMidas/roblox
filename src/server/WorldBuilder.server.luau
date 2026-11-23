@@ -47,7 +47,7 @@ local function makeTree(parent: Instance, position: Vector3, palette, style: num
 end
 
 local function makePortal(parent: Instance, world, position: Vector3, destinationId: number, actionText: string)
-	local pad = makePart(parent, "Portal_" .. tostring(destinationId), Vector3.new(15, 1.2, 15), CFrame.new(position), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
+	local pad = makePart(parent, "Portal_" .. tostring(destinationId), Vector3.new(15, 1.2, 15), CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
 	pad.CanCollide = true
 	pad:SetAttribute("TargetWorldId", destinationId)
 
@@ -82,16 +82,9 @@ for _, world in ipairs(WORLDS) do
 	plaza.CanCollide = true
 	plaza.Transparency = 0.08
 
-	local spawn = Instance.new("SpawnLocation")
-	spawn.Name = "WorldSpawn_" .. tostring(world.Id)
-	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.CFrame = CFrame.new(center + Vector3.new(0, 5, 0))
-	spawn.Anchored = true
-	spawn.Neutral = true
-	spawn.Duration = 0
+	local spawn = makePart(model, "WorldSpawn_" .. tostring(world.Id), Vector3.new(8, 1, 8), CFrame.new(center + Vector3.new(0, 5, 0)), world.Top, Enum.Material.SmoothPlastic)
 	spawn.Transparency = 1
 	spawn.CanCollide = false
-	spawn.Parent = model
 	spawn:SetAttribute("WorldId", world.Id)
 
 	-- Decorative props are anchored and deliberately low-part-count.
