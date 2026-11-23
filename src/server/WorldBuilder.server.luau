@@ -47,13 +47,16 @@ local function makeTree(parent: Instance, position: Vector3, palette, style: num
 end
 
 local function makePortal(parent: Instance, world, position: Vector3, destinationId: number, actionText: string)
-	local pad = makePart(parent, "Portal_" .. tostring(destinationId), Vector3.new(15, 1.2, 15), CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
+	local pad = makePart(parent, "Portal_" .. tostring(destinationId), Vector3.new(1.2, 15, 15), CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
 	pad.CanCollide = true
 	pad:SetAttribute("TargetWorldId", destinationId)
 
-	local ring = makePart(parent, "PortalRing", Vector3.new(2, 13, 13), CFrame.new(position + Vector3.new(0, 7, 0)) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
-	ring.CanCollide = false
-	ring.Transparency = 0.18
+	local leftPost = makePart(parent, "PortalPost", Vector3.new(2, 12, 2), CFrame.new(position + Vector3.new(-6, 7, 0)), world.Accent, Enum.Material.Neon)
+	leftPost.CanCollide = false
+	local rightPost = makePart(parent, "PortalPost", Vector3.new(2, 12, 2), CFrame.new(position + Vector3.new(6, 7, 0)), world.Accent, Enum.Material.Neon)
+	rightPost.CanCollide = false
+	local topBeam = makePart(parent, "PortalTop", Vector3.new(14, 2, 2), CFrame.new(position + Vector3.new(0, 13, 0)), world.Accent, Enum.Material.Neon)
+	topBeam.CanCollide = false
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = "WorldPrompt"
@@ -72,13 +75,13 @@ for _, world in ipairs(WORLDS) do
 	model.Parent = root
 
 	local center = world.Center
-	local rock = makePart(model, "FloatingRock", Vector3.new(170, 34, 170), CFrame.new(center + Vector3.new(0, -15, 0)) * CFrame.Angles(0, 0, math.rad(90)), world.Rock, Enum.Material.Slate, Enum.PartType.Cylinder)
+	local rock = makePart(model, "FloatingRock", Vector3.new(34, 170, 170), CFrame.new(center + Vector3.new(0, -15, 0)) * CFrame.Angles(0, 0, math.rad(90)), world.Rock, Enum.Material.Slate, Enum.PartType.Cylinder)
 	rock.CanCollide = true
-	local grass = makePart(model, "IslandSurface", Vector3.new(158, 8, 158), CFrame.new(center - Vector3.new(0, 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), world.Top, world.Material, Enum.PartType.Cylinder)
+	local grass = makePart(model, "IslandSurface", Vector3.new(8, 158, 158), CFrame.new(center - Vector3.new(0, 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), world.Top, world.Material, Enum.PartType.Cylinder)
 	grass.CanCollide = true
 
 	-- A simple raised spawn plaza and landmark make each island easy to read.
-	local plaza = makePart(model, "SpawnPlaza", Vector3.new(44, 1.5, 44), CFrame.new(center + Vector3.new(0, 3, 0)), world.Accent, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
+	local plaza = makePart(model, "SpawnPlaza", Vector3.new(1.5, 44, 44), CFrame.new(center + Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.SmoothPlastic, Enum.PartType.Cylinder)
 	plaza.CanCollide = true
 	plaza.Transparency = 0.08
 
