@@ -11,6 +11,21 @@ local AUTOSAVE_INTERVAL = 120
 local BLOW_COOLDOWN = 0.08
 local SELL_COOLDOWN = 0.5
 local SHOP_COOLDOWN = 0.25
+local WORLD_COOLDOWN = 1
+local REBIRTH_COOLDOWN = 2
+
+local WORLDS = {
+	[1] = {Name = "Grassland", Cost = 0, RequiredLevel = 1, CoinMultiplier = 1, XPMultiplier = 1},
+	[2] = {Name = "Frozen World", Cost = 5000, RequiredLevel = 5, CoinMultiplier = 1.5, XPMultiplier = 1.25},
+	[3] = {Name = "Candy World", Cost = 50000, RequiredLevel = 12, CoinMultiplier = 2.5, XPMultiplier = 1.6},
+	[4] = {Name = "Galaxy World", Cost = 500000, RequiredLevel = 20, CoinMultiplier = 4, XPMultiplier = 2.2},
+}
+local REBIRTH_REQUIRED_LEVEL = 20
+local REBIRTH_REQUIRED_COINS = 250000
+
+local function xpRequired(level: number): number
+	return 100 + math.max(0, level - 1) * 75
+end
 
 local GUMS_BY_ID = {
 	[1] = { Id = 1, Name = "Mint", Price = 0, Power = 1, MaxBubble = 25, SellMultiplier = 1, Color = Color3.fromRGB(255, 110, 180) },
@@ -25,6 +40,10 @@ local DEFAULT_DATA = {
 	BubbleSize = 0,
 	GumLevel = 1,
 	OwnedGums = { [1] = true },
+	XP = 0,
+	PlayerLevel = 1,
+	Rebirths = 0,
+	UnlockedWorlds = { [1] = true },
 }
 
 local playerStore
@@ -66,6 +85,8 @@ local blowEvent = getOrCreateRemote("BlowBubble")
 local syncBubbleEvent = getOrCreateRemote("SyncBubble")
 local sellBubblesEvent = getOrCreateRemote("SellBubbles")
 local shopActionEvent = getOrCreateRemote("ShopAction")
+local worldActionEvent = getOrCreateRemote("WorldAction")
+local rebirthActionEvent = getOrCreateRemote("RebirthAction")
 
 local sessionData: {[Player]: any} = {}
 local lastActionAt: {[Player]: {[string]: number}} = {}
@@ -91,6 +112,25 @@ local function sanitizeData(raw)
 	if type(raw.BubbleSize) == "number" and raw.BubbleSize >= 0 and raw.BubbleSize < 1e9 then
 		clean.BubbleSize = math.floor(raw.BubbleSize)
 	end
+	if type(raw.XP) == "number" and raw.XP >= 0 and raw.XP < 1e12 then
+		clean.XP = math.floor(raw.XP)
+	end
+	if type(raw.PlayerLevel) == "number" then
+		clean.PlayerLevel = math.clamp(math.floor(raw.PlayerLevel), 1, 1000)
+	end
+	if type(raw.Rebirths) == "number" and raw.Rebirths >= 0 then
+		clean.Rebirths = math.clamp(math.floor(raw.Rebirths), 0, 10000)
+	end
+	if type(raw.UnlockedWorlds) == "table" then
+		for key, unlocked in pairs(raw.UnlockedWorlds) do
+			local worldId = tonumber(key)
+			if unlocked == true and worldId and WORLDS[worldId] then
+				clean.UnlockedWorlds[worldId] = true
+			end
+		end
+	end
+	clean.UnlockedWorlds[1] = true
+
 	if type(raw.OwnedGums) == "table" then
 		for key, owned in pairs(raw.OwnedGums) do
 			local gumId = tonumber(key)
@@ -164,15 +204,23 @@ local function syncPlayerState(player: Player)
 	player:SetAttribute("MaxBubble", gum.MaxBubble)
 	player:SetAttribute("GumLevel", data.GumLevel)
 	player:SetAttribute("OwnedGums", formatOwnedGums(data.OwnedGums))
+	player:SetAttribute("PlayerLevel", data.PlayerLevel)
+	player:SetAttribute("XP", data.XP)
+	player:SetAttribute("XPToNext", xpRequired(data.PlayerLevel))
+	player:SetAttribute("Rebirths", data.Rebirths)
+	player:SetAttribute("CoinMultiplier", (1 + data.Rebirths * 0.5) * (WORLDS[player:GetAttribute("CurrentWorldId") or 1] or WORLDS[1]).CoinMultiplier)
+	player:SetAttribute("UnlockedWorlds", formatOwnedGums(data.UnlockedWorlds))
 
 	local stats = player:FindFirstChild("leaderstats")
 	if stats then
 		local coins = stats:FindFirstChild("Coins")
 		local bubbles = stats:FindFirstChild("Bubbles")
 		local level = stats:FindFirstChild("Level")
+		local rebirths = stats:FindFirstChild("Rebirths")
 		if coins and coins:IsA("IntValue") then coins.Value = data.Coins end
 		if bubbles and bubbles:IsA("IntValue") then bubbles.Value = data.BubbleSize end
-		if level and level:IsA("IntValue") then level.Value = data.GumLevel end
+		if level and level:IsA("IntValue") then level.Value = data.PlayerLevel end
+		if rebirths and rebirths:IsA("IntValue") then rebirths.Value = data.Rebirths end
 	end
 
 	broadcastBubbleVisual(player)
@@ -215,6 +263,25 @@ local function savePlayerData(player: Player): boolean
 	return ok
 end
 
+local function awardXP(player: Player, amount: number)
+	local data = sessionData[player]
+	if not data or amount <= 0 then return end
+	data.XP += math.floor(amount)
+	while data.PlayerLevel < 1000 do
+		local needed = xpRequired(data.PlayerLevel)
+		if data.XP < needed then break end
+		data.XP -= needed
+		data.PlayerLevel += 1
+	end
+	syncPlayerState(player)
+end
+
+local function getWorldMultiplier(player: Player): number
+	local worldId = player:GetAttribute("CurrentWorldId") or 1
+	local world = WORLDS[worldId] or WORLDS[1]
+	return world.CoinMultiplier * (1 + (sessionData[player] and sessionData[player].Rebirths or 0) * 0.5)
+end
+
 local function inflateBubble(player: Player)
 	local data = sessionData[player]
 	if not data then return end
@@ -224,6 +291,9 @@ local function inflateBubble(player: Player)
 
 	data.BubbleSize = math.min(gum.MaxBubble, data.BubbleSize + gum.Power)
 	syncPlayerState(player)
+	local worldId = player:GetAttribute("CurrentWorldId") or 1
+	local world = WORLDS[worldId] or WORLDS[1]
+	awardXP(player, math.max(1, math.floor(gum.Power * 0.5 * world.XPMultiplier)))
 end
 
 local function sellBubble(player: Player)
@@ -231,12 +301,16 @@ local function sellBubble(player: Player)
 	if not data or data.BubbleSize <= 0 then return end
 
 	local gum = getGum(data)
-	local reward = math.floor(data.BubbleSize * gum.SellMultiplier)
+	local reward = math.floor(data.BubbleSize * gum.SellMultiplier * getWorldMultiplier(player))
 	if reward <= 0 then return end
 
 	data.Coins += reward
+	local soldSize = data.BubbleSize
 	data.BubbleSize = 0
 	syncPlayerState(player)
+	local worldId = player:GetAttribute("CurrentWorldId") or 1
+	local world = WORLDS[worldId] or WORLDS[1]
+	awardXP(player, math.max(5, math.floor(soldSize * 0.35 * world.XPMultiplier)))
 end
 
 local function isPlayerAtShop(player: Player): boolean
@@ -291,6 +365,85 @@ end)
 
 shopActionEvent.OnServerEvent:Connect(handleShopAction)
 
+local function getWorldSpawn(worldId: number): BasePart?
+	local worldFolder = workspace:FindFirstChild("BubbleWorld")
+	if not worldFolder then return nil end
+	for _, descendant in ipairs(worldFolder:GetDescendants()) do
+		if descendant:IsA("SpawnLocation") and descendant:GetAttribute("WorldId") == worldId then
+			return descendant
+		end
+	end
+	return nil
+end
+
+local function teleportToWorld(player: Player, worldId: number)
+	local spawn = getWorldSpawn(worldId)
+	local character = player.Character
+	if not spawn or not character then return end
+	character:PivotTo(spawn.CFrame + Vector3.new(0, 5, 0))
+	player:SetAttribute("CurrentWorldId", worldId)
+	syncPlayerState(player)
+end
+
+local function handleWorldPrompt(player: Player, prompt: ProximityPrompt)
+	if not canPerform(player, "World", WORLD_COOLDOWN) then return end
+	local portal = prompt.Parent
+	if not portal or not portal:IsA("BasePart") then return end
+	local targetId = portal:GetAttribute("TargetWorldId")
+	if type(targetId) ~= "number" or not WORLDS[targetId] then return end
+	local data = sessionData[player]
+	if not data then return end
+
+	if not data.UnlockedWorlds[targetId] then
+		local world = WORLDS[targetId]
+		if targetId ~= 1 and not data.UnlockedWorlds[targetId - 1] then return end
+		if data.PlayerLevel < world.RequiredLevel or data.Coins < world.Cost then return end
+		data.Coins -= world.Cost
+		data.UnlockedWorlds[targetId] = true
+		syncPlayerState(player)
+	end
+
+	teleportToWorld(player, targetId)
+end
+
+local function bindWorldPrompt(instance: Instance)
+	if not instance:IsA("ProximityPrompt") or instance.Name ~= "WorldPrompt" then return end
+	if instance:GetAttribute("ServerBound") then return end
+	instance:SetAttribute("ServerBound", true)
+	instance.Triggered:Connect(function(player)
+		handleWorldPrompt(player, instance)
+	end)
+end
+
+for _, descendant in ipairs(workspace:GetDescendants()) do
+	bindWorldPrompt(descendant)
+end
+workspace.DescendantAdded:Connect(bindWorldPrompt)
+
+worldActionEvent.OnServerEvent:Connect(function(player, worldIdRaw)
+	local worldId = tonumber(worldIdRaw)
+	if not worldId or worldId % 1 ~= 0 then return end
+	local spawn = getWorldSpawn(worldId)
+	if spawn and sessionData[player] and sessionData[player].UnlockedWorlds[worldId] then
+		teleportToWorld(player, worldId)
+	end
+end)
+
+rebirthActionEvent.OnServerEvent:Connect(function(player)
+	if not canPerform(player, "Rebirth", REBIRTH_COOLDOWN) then return end
+	local data = sessionData[player]
+	if not data or data.PlayerLevel < REBIRTH_REQUIRED_LEVEL or data.Coins < REBIRTH_REQUIRED_COINS then return end
+
+	data.Rebirths += 1
+	data.Coins = 0
+	data.BubbleSize = 0
+	data.GumLevel = 1
+	data.OwnedGums = { [1] = true }
+	data.XP = 0
+	data.PlayerLevel = 1
+	syncPlayerState(player)
+end)
+
 local function hookSellZone(instance: Instance)
 	if not instance:IsA("BasePart") then return end
 	instance.Touched:Connect(function(hit)
@@ -313,7 +466,7 @@ local function createLeaderstats(player: Player)
 	stats.Name = "leaderstats"
 	stats.Parent = player
 
-	for _, statName in ipairs({"Level", "Coins", "Bubbles"}) do
+	for _, statName in ipairs({"Level", "Coins", "Bubbles", "Rebirths"}) do
 		local value = Instance.new("IntValue")
 		value.Name = statName
 		value.Parent = stats
@@ -325,6 +478,7 @@ local function onPlayerAdded(player: Player)
 
 	local data, loadedSuccessfully = loadPlayerData(player)
 	sessionData[player] = data
+	player:SetAttribute("CurrentWorldId", 1)
 	if not loadedSuccessfully then
 		player:SetAttribute("DataLoadFailed", true)
 		player:SetAttribute("DataWarning", "Progress could not be loaded; this session will not overwrite saved data.")
