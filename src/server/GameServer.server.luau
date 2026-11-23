@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 
 local DATASTORE_NAME = "BubbleGumSim_Save_v1"
 local AUTOSAVE_INTERVAL = 120
@@ -324,18 +325,24 @@ local function sellBubble(player: Player)
 end
 
 local function isPlayerAtShop(player: Player): boolean
-	local zone = workspace:FindFirstChild("ShopZone", true)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not zone or not zone:IsA("BasePart") or not root then
+	if not root or not root:IsA("BasePart") then
 		return false
 	end
 
-	local localPosition = zone.CFrame:PointToObjectSpace(root.Position)
-	local half = zone.Size * 0.5
-	return math.abs(localPosition.X) <= half.X + 5
-		and math.abs(localPosition.Z) <= half.Z + 5
-		and math.abs(localPosition.Y) <= half.Y + 10
+	for _, zone in CollectionService:GetTagged("GumShopZone") do
+		if zone:IsA("BasePart") and zone:IsDescendantOf(workspace) then
+			local position = zone.CFrame:PointToObjectSpace(root.Position)
+			local half = zone.Size * 0.5
+			if math.abs(position.X) <= half.X + 2
+				and math.abs(position.Z) <= half.Z + 2
+				and math.abs(position.Y) <= half.Y then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 local function handleShopAction(player: Player, gumIdRaw)

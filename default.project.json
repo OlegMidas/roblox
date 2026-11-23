@@ -9,6 +9,12 @@
       "$className": "ServerScriptService",
       "$path": "src/server"
     },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "WorldAssets": {
+        "$path": "assets/world"
+      }
+    },
     "StarterPlayer": {
       "$className": "StarterPlayer",
       "StarterPlayerScripts": {

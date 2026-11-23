@@ -1,7 +1,11 @@
 --!strict
--- Four themed low-poly islands plus the starter gum shop. Run from ServerScriptService.
+-- Builds the islands and places the original market stalls.
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
+local ServerStorage = game:GetService("ServerStorage")
+local CollectionService = game:GetService("CollectionService")
+
+local assets = ServerStorage:WaitForChild("WorldAssets")
 
 -- Bright, readable simulator lighting. Replace named effects so Studio reruns stay clean.
 Lighting.ClockTime = 14
@@ -48,167 +52,366 @@ local root = Instance.new("Folder")
 root.Name = "BubbleWorld"
 root.Parent = Workspace
 
-local WORLDS = {
-	{Id=1, Name="Grassland", Center=Vector3.new(0,0,0), Top=Color3.fromRGB(106,196,105), Rock=Color3.fromRGB(91,83,76), Accent=Color3.fromRGB(255,190,80), Material=Enum.Material.Grass, Path=Color3.fromRGB(220,196,145)},
-	{Id=2, Name="Frozen World", Center=Vector3.new(270,18,0), Top=Color3.fromRGB(160,220,245), Rock=Color3.fromRGB(105,145,170), Accent=Color3.fromRGB(100,220,255), Material=Enum.Material.Ice, Path=Color3.fromRGB(220,245,255)},
-	{Id=3, Name="Candy World", Center=Vector3.new(540,42,0), Top=Color3.fromRGB(255,160,205), Rock=Color3.fromRGB(175,95,150), Accent=Color3.fromRGB(255,225,110), Material=Enum.Material.SmoothPlastic, Path=Color3.fromRGB(255,225,238)},
-	{Id=4, Name="Galaxy World", Center=Vector3.new(810,72,0), Top=Color3.fromRGB(90,70,155), Rock=Color3.fromRGB(42,35,85), Accent=Color3.fromRGB(90,220,255), Material=Enum.Material.SmoothPlastic, Path=Color3.fromRGB(130,115,195)},
+type World = {
+	Id: number,
+	Name: string,
+	Center: Vector3,
+	Ground: Color3,
+	Rock: Color3,
+	Trim: Color3,
+	Accent: Color3,
+	Path: Color3,
+	Material: Enum.Material,
 }
 
-local function make(parent: Instance, name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material, shape: Enum.PartType?): Part
-	local p=Instance.new("Part")
-	p.Name=name p.Anchored=true p.Size=size p.CFrame=cf p.Color=color p.Material=material
-	p.TopSurface=Enum.SurfaceType.Smooth p.BottomSurface=Enum.SurfaceType.Smooth p.Shape=shape or Enum.PartType.Block p.Parent=parent
-	return p
-end
-local function orb(parent: Instance, name: string, diameter: number, pos: Vector3, color: Color3, material: Enum.Material): Part
-	return make(parent,name,Vector3.one*diameter,CFrame.new(pos),color,material,Enum.PartType.Ball)
-end
-local function makeLamp(parent: Instance, pos: Vector3, color: Color3)
-	make(parent,"LampPost",Vector3.new(1,9,1),CFrame.new(pos+Vector3.new(0,4.5,0)),Color3.fromRGB(65,70,80),Enum.Material.Metal)
-	local glow=orb(parent,"LampGlow",3.5,pos+Vector3.new(0,9.5,0),color,Enum.Material.Neon)
-	glow.CanCollide=false
-	local light=Instance.new("PointLight") light.Color=color light.Brightness=1 light.Range=18 light.Parent=glow
-end
-local function makeTree(parent: Instance, pos: Vector3, world, index: number)
-	make(parent,"TreeTrunk",Vector3.new(2.5,10,2.5),CFrame.new(pos+Vector3.new(0,5,0)),Color3.fromRGB(111,78,52),Enum.Material.Wood)
-	local crownColor=world.Id==3 and (index%2==0 and world.Accent or Color3.fromRGB(255,115,185)) or world.Accent
-	orb(parent,"TreeCrown",world.Id==2 and 10 or 12,pos+Vector3.new(0,12,0),crownColor,world.Id==3 and Enum.Material.SmoothPlastic or Enum.Material.Grass)
-	if world.Id==1 then orb(parent,"Fruit",2.2,pos+Vector3.new(4,11,0),Color3.fromRGB(255,100,95),Enum.Material.SmoothPlastic) end
-end
-local function makeWorldLandmark(parent: Instance, world, center: Vector3)
-	local position = center + Vector3.new(-5, 3, -28)
-	if world.Id == 2 then
-		for index = 1, 5 do
-			local offset = Vector3.new((index - 3) * 5, 0, (index % 2 == 0) and 2 or -2)
-			local height = 12 + (index % 3) * 5
-			local shard = make(parent, "IceSpire", Vector3.new(4, height, 4), CFrame.new(position + offset + Vector3.new(0, height * 0.5, 0)) * CFrame.Angles(math.rad(5), 0, math.rad((index - 3) * 5)), Color3.fromRGB(155, 235, 255), Enum.Material.Ice)
-			shard.Transparency = 0.12
-			shard.CanCollide = false
-		end
-	elseif world.Id == 3 then
-		for index = 1, 3 do
-			local offset = Vector3.new((index - 2) * 10, 0, 0)
-			make(parent, "CandyStick", Vector3.new(2, 13, 2), CFrame.new(position + offset + Vector3.new(0, 6.5, 0)), Color3.fromRGB(250, 245, 235), Enum.Material.SmoothPlastic).CanCollide = false
-			local candy = orb(parent, "Lollipop", 10, position + offset + Vector3.new(0, 14, 0), index == 2 and Color3.fromRGB(255, 225, 95) or Color3.fromRGB(255, 105, 185), Enum.Material.Neon)
-			candy.CanCollide = false
-		end
-	elseif world.Id == 4 then
-		local planet = orb(parent, "GalaxyPlanet", 15, position + Vector3.new(0, 12, 0), Color3.fromRGB(120, 95, 235), Enum.Material.Neon)
-		planet.CanCollide = false
-		local ring = make(parent, "PlanetRing", Vector3.new(1.2, 25, 25), CFrame.new(position + Vector3.new(0, 12, 0)) * CFrame.Angles(math.rad(18), 0, math.rad(90)), Color3.fromRGB(100, 225, 255), Enum.Material.Neon, Enum.PartType.Cylinder)
-		ring.Transparency = 0.28
-		ring.CanCollide = false
-		local star = orb(parent, "OrbitingStar", 4, position + Vector3.new(15, 18, 0), Color3.fromRGB(255, 245, 145), Enum.Material.Neon)
-		star.CanCollide = false
-	end
+local rgb = Color3.fromRGB
+local white = rgb(255, 255, 255)
+local timber = rgb(109, 80, 57)
+local cream = rgb(255, 237, 198)
+local dark = rgb(40, 33, 29)
+local smooth = Enum.Material.SmoothPlastic
+local worlds: {World} = {
+	{Id = 1, Name = "Grassland", Center = Vector3.new(0, 35, 0), Ground = rgb(99, 157, 67), Rock = rgb(148, 91, 51), Trim = rgb(146, 182, 89), Accent = rgb(135, 219, 83), Path = rgb(222, 187, 132), Material = Enum.Material.Grass},
+	{Id = 2, Name = "Frozen World", Center = Vector3.new(280, 56, 0), Ground = rgb(202, 234, 248), Rock = rgb(79, 122, 161), Trim = rgb(239, 250, 255), Accent = rgb(114, 229, 255), Path = rgb(159, 207, 226), Material = Enum.Material.Snow},
+	{Id = 3, Name = "Candy World", Center = Vector3.new(560, 80, 0), Ground = rgb(243, 150, 177), Rock = rgb(142, 80, 111), Trim = rgb(255, 208, 195), Accent = rgb(255, 126, 189), Path = rgb(255, 229, 185), Material = smooth},
+	{Id = 4, Name = "Galaxy World", Center = Vector3.new(840, 110, 0), Ground = rgb(91, 83, 154), Rock = rgb(51, 45, 93), Trim = rgb(143, 123, 204), Accent = rgb(138, 230, 255), Path = rgb(184, 167, 226), Material = Enum.Material.Slate},
+}
+
+local function part(parent: Instance, name: string, size: Vector3, frame: CFrame, color: Color3, material: Enum.Material, solid: boolean, shape: Enum.PartType?): Part
+	local item = Instance.new("Part")
+	item.Name = name
+	item.Anchored = true
+	item.Shape = shape or Enum.PartType.Block
+	item.Size = size
+	item.CFrame = frame
+	item.Color = color
+	item.Material = material
+	item.TopSurface = Enum.SurfaceType.Smooth
+	item.BottomSurface = Enum.SurfaceType.Smooth
+	item.CanCollide = solid
+	item.CanTouch = false
+	item.CanQuery = solid
+	item.Parent = parent
+	return item
 end
 
-local function makeSign(parent: Instance, text: string, pos: Vector3, color: Color3, width: number)
-	make(parent,"SignPost",Vector3.new(1.2,8,1.2),CFrame.new(pos+Vector3.new(0,4,0)),Color3.fromRGB(105,76,53),Enum.Material.Wood)
-	local board=make(parent,"SignBoard",Vector3.new(width,5,0.8),CFrame.new(pos+Vector3.new(0,8,0)),color,Enum.Material.SmoothPlastic)
-	local gui=Instance.new("SurfaceGui") gui.Face=Enum.NormalId.Front gui.CanvasSize=Vector2.new(600,220) gui.Parent=board
-	local label=Instance.new("TextLabel") label.Size=UDim2.fromScale(1,1) label.BackgroundTransparency=1 label.Text=text label.TextColor3=Color3.fromRGB(40,42,55) label.Font=Enum.Font.GothamBlack label.TextScaled=true label.Parent=gui
-end
-local function makePortal(parent: Instance, world, pos: Vector3, targetId: number, action: string)
-	local pad=make(parent,"Portal_"..targetId,Vector3.new(1.2,15,15),CFrame.new(pos)*CFrame.Angles(0,0,math.rad(90)),world.Accent,Enum.Material.Neon,Enum.PartType.Cylinder)
-	pad:SetAttribute("TargetWorldId",targetId)
-	for _,x in ipairs({-6,6}) do make(parent,"PortalPost",Vector3.new(2,12,2),CFrame.new(pos+Vector3.new(x,7,0)),world.Accent,Enum.Material.Neon).CanCollide=false end
-	make(parent,"PortalTop",Vector3.new(14,2,2),CFrame.new(pos+Vector3.new(0,13,0)),world.Accent,Enum.Material.Neon).CanCollide=false
-	local prompt=Instance.new("ProximityPrompt") prompt.Name="WorldPrompt" prompt.ActionText=action prompt.ObjectText=WORLDS[targetId].Name prompt.HoldDuration=0.35 prompt.MaxActivationDistance=14 prompt.RequiresLineOfSight=false prompt.Parent=pad
+local function disc(parent: Instance, name: string, pos: Vector3, diameter: number, height: number, color: Color3, material: Enum.Material, solid: boolean): Part
+	return part(parent, name, Vector3.new(height, diameter, diameter), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), color, material, solid, Enum.PartType.Cylinder)
 end
 
-local function makeSellStation(model: Model, center: Vector3, world)
-	local station = Instance.new("Model")
-	station.Name = "SellStation"
-	station.Parent = model
-	local position = center + Vector3.new(42, 2.8, 24)
-	local platform = make(station, "SellPlatform", Vector3.new(1.5, 26, 22), CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)), world.Accent, Enum.Material.Neon, Enum.PartType.Cylinder)
-	platform.Transparency = 0.18
-	platform.CanCollide = true
-	local sign = make(station, "SellSign", Vector3.new(15, 4, 0.8), CFrame.new(center + Vector3.new(42, 8, 35)), world.Accent, Enum.Material.SmoothPlastic)
+local function orb(parent: Instance, name: string, pos: Vector3, size: Vector3, color: Color3, material: Enum.Material): Part
+	return part(parent, name, size, CFrame.new(pos), color, material, false, Enum.PartType.Ball)
+end
+
+local function beam(parent: Instance, name: string, from: Vector3, to: Vector3, width: number, height: number, color: Color3, material: Enum.Material): Part
+	return part(parent, name, Vector3.new(width, height, (to - from).Magnitude), CFrame.lookAt((from + to) / 2, to), color, material, false)
+end
+
+local function sign(parent: Instance, name: string, text: string, frame: CFrame, width: number, color: Color3)
+	local board = part(parent, name, Vector3.new(width, 3.5, 0.7), frame, timber, Enum.Material.WoodPlanks, false)
 	local surface = Instance.new("SurfaceGui")
 	surface.Face = Enum.NormalId.Front
-	surface.CanvasSize = Vector2.new(500, 160)
-	surface.Parent = sign
+	surface.CanvasSize = Vector2.new(640, 144)
+	surface.LightInfluence = 0.15
+	surface.Parent = board
+
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = "SELL BUBBLES"
-	label.TextColor3 = Color3.fromRGB(35, 45, 65)
-	label.Font = Enum.Font.GothamBlack
+	label.Position = UDim2.fromScale(0.045, 0.12)
+	label.Size = UDim2.fromScale(0.91, 0.76)
+	label.BackgroundColor3 = dark
+	label.BorderSizePixel = 0
+	label.TextColor3 = color
+	label.Text = text
 	label.TextScaled = true
+	label.Font = Enum.Font.GothamBlack
 	label.Parent = surface
-	local zone = make(station, "SellZone", Vector3.new(26, 8, 24), CFrame.new(center + Vector3.new(42, 4, 24)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic)
+
+	local border = Instance.new("UIStroke")
+	border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	border.Color = color
+	border.Thickness = 3
+	border.Parent = label
+end
+
+local function lantern(parent: Instance, pos: Vector3, color: Color3)
+	part(parent, "LanternPost", Vector3.new(0.8, 6, 0.8), CFrame.new(pos + Vector3.new(0, 3, 0)), timber, Enum.Material.Wood, true)
+	local lamp = orb(parent, "LanternGlass", pos + Vector3.new(0, 6.4, 0), Vector3.new(1.5, 1.8, 1.5), color, Enum.Material.Neon)
+	disc(parent, "LanternCap", pos + Vector3.new(0, 7.35, 0), 1.9, 0.4, timber, Enum.Material.Metal, false)
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Brightness = 0.55
+	light.Range = 13
+	light.Parent = lamp
+end
+
+local function makeIsland(parent: Model, world: World, random: Random)
+	local center = world.Center
+	disc(parent, "IslandFloor", center - Vector3.new(0, 2, 0), 170, 4, world.Ground, world.Material, true)
+	disc(parent, "RockShoulder", center - Vector3.new(0, 8, 0), 163, 12, world.Rock, Enum.Material.Slate, false)
+	disc(parent, "LowerRock", center - Vector3.new(0, 20, 0), 128, 17, world.Rock:Lerp(dark, 0.23), Enum.Material.Slate, false)
+	disc(parent, "IslandRoot", center - Vector3.new(0, 33, 0), 76, 16, world.Rock:Lerp(dark, 0.38), Enum.Material.Slate, false)
+	for index = 0, 23 do
+		local angle = index * math.pi / 12
+		local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		local position = center + direction * random:NextNumber(72, 76)
+		local drop = random:NextNumber(13, 27)
+		local orientation = CFrame.Angles(0, -angle, random:NextNumber(-0.32, -0.15))
+		local color = world.Rock:Lerp(dark, random:NextNumber(0.03, 0.25))
+		part(parent, "CliffFace", Vector3.new(18, drop, 25),
+			CFrame.new(position - Vector3.new(0, drop / 2 + 1, 0)) * orientation, color, Enum.Material.Slate, false)
+		part(parent, "CliffLip", Vector3.new(18, 0.8, 25),
+			CFrame.new(position - Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, -angle, 0), world.Trim, world.Material, false)
+	end
+
+	for index = 0, 8 do
+		local angle = math.rad(21 + index * 17)
+		local height = random:NextNumber(9, 21)
+		local radius = random:NextNumber(68, 73)
+		local pos = center + Vector3.new(math.cos(angle) * radius, 0, -math.sin(angle) * radius)
+		local rotation = CFrame.Angles(0, angle, 0)
+		local width = random:NextNumber(10, 15)
+		part(parent, "Ridge", Vector3.new(width, height, width), CFrame.new(pos + Vector3.new(0, height / 2, 0)) * rotation,
+			world.Rock:Lerp(world.Ground, random:NextNumber(0, 0.22)), Enum.Material.Slate, true)
+		part(parent, "RidgeCap", Vector3.new(width + 0.3, 1.05, width + 0.3), CFrame.new(pos + Vector3.new(0, height, 0)) * rotation,
+			world.Trim, world.Material, false)
+	end
+end
+
+local function foliage(parent: Model, world: World, position: Vector3, size: number, random: Random)
+	local color = world.Trim
+	local height = size * 1.15
+	local trunk = if world.Id == 3 then rgb(188, 102, 122) else timber
+	part(parent, "Trunk", Vector3.new(size * 0.27, height, size * 0.27), CFrame.new(position + Vector3.new(0, height / 2, 0)), trunk, Enum.Material.Wood, true)
+	for index = 1, 5 do
+		local angle = index * math.pi * 0.4
+		local offset = Vector3.new(math.cos(angle) * size * 0.25, height + random:NextNumber(-0.14, 0.25) * size, math.sin(angle) * size * 0.25)
+		local tint = random:NextNumber(0.15, 0.65)
+		local leaf = if world.Id == 1 then rgb(41, 118, 65):Lerp(color, tint) else color:Lerp(world.Accent, tint)
+		orb(parent, "Canopy", position + offset, Vector3.new(0.82, 0.63, 0.78) * size, leaf, world.Material)
+	end
+	orb(parent, "Crown", position + Vector3.new(0, height + size * 0.35, 0), Vector3.new(0.79, 0.57, 0.79) * size, color, world.Material)
+end
+
+local function makeLandmark(parent: Model, world: World)
+	local pos = world.Center + Vector3.new(0, 0, -36)
+	if world.Id == 1 then
+		disc(parent, "FountainBase", pos + Vector3.new(0, 0.43, 0), 25, 0.85, world.Path, Enum.Material.Cobblestone, true)
+		disc(parent, "FountainBasin", pos + Vector3.new(0, 0.95, 0), 20, 0.5, timber, Enum.Material.Slate, true)
+		disc(parent, "FountainWater", pos + Vector3.new(0, 1.24, 0), 18.8, 0.13, rgb(80, 195, 216), Enum.Material.Glass, false)
+		disc(parent, "FountainColumn", pos + Vector3.new(0, 3, 0), 3.3, 4.8, cream, Enum.Material.Slate, true)
+		disc(parent, "FountainCrown", pos + Vector3.new(0, 5.45, 0), 7, 0.55, cream, Enum.Material.Slate, false)
+		orb(parent, "FountainBubble", pos + Vector3.new(0, 8.1, 0), Vector3.one * 4.5, rgb(255, 149, 204), Enum.Material.Glass)
+		for index = 0, 7 do
+			local angle = index * math.pi / 4
+			local direction = Vector3.new(math.cos(angle), 0, math.sin(angle))
+			for drop = 1, 4 do
+				local lift = math.sin(drop * math.pi / 5) * 3.2
+				orb(parent, "WaterDroplet", pos + direction * (drop * 1.75) + Vector3.new(0, 1.5 + lift, 0),
+					Vector3.one * (0.52 - drop * 0.055), rgb(128, 233, 242), Enum.Material.Glass)
+			end
+		end
+	elseif world.Id == 2 then
+		disc(parent, "GlacierPool", pos + Vector3.new(0, 0.16, 0), 29, 0.3, rgb(111, 204, 243), Enum.Material.Ice, true)
+		for index = -3, 3 do
+			local height = 16 + (3 - math.abs(index)) * 3.3
+			local frame = CFrame.new(pos + Vector3.new(index * 3.7, height / 2, -3 + math.abs(index)))
+				* CFrame.Angles(0, index * 0.32, index * 0.1)
+			part(parent, "GlacierSpire", Vector3.new(4.2, height, 5.1), frame,
+				world.Accent:Lerp(world.Trim, math.abs(index) * 0.19), Enum.Material.Ice, true)
+			orb(parent, "SnowDrift", pos + Vector3.new(index * 3.9, 0.9, 5), Vector3.new(7, 2.8, 7), world.Trim, Enum.Material.Snow)
+		end
+	elseif world.Id == 3 then
+		for tier = 0, 2 do
+			local diameter = 25 - tier * 6
+			local height = 1.9 + tier * 4.1
+			disc(parent, "CakeTier", pos + Vector3.new(0, height, 0), diameter, 3.8, world.Ground, smooth, true)
+			disc(parent, "CakeIcing", pos + Vector3.new(0, height + 1.9, 0), diameter + 0.55, 0.8, world.Trim, smooth, false)
+		end
+		for _, x in {-17, 0, 17} do
+			local base = pos + Vector3.new(x, if x == 0 then 12 else 0, -1)
+			part(parent, "LollipopStick", Vector3.new(1.1, 9, 1.1), CFrame.new(base + Vector3.new(0, 4.5, 0)), cream, smooth, false)
+			part(parent, "Lollipop", Vector3.new(1.3, 7, 7),
+				CFrame.new(base + Vector3.new(0, 10.5, 0)) * CFrame.Angles(0, math.pi / 2, 0), world.Accent, smooth, false, Enum.PartType.Cylinder)
+			for index = 0, 9 do
+				local angle = index * math.pi * 0.2
+				orb(parent, "SugarPearl", base + Vector3.new(math.cos(angle) * 2.55, 10.5 + math.sin(angle) * 2.55, 0.72),
+					Vector3.one * 0.7, cream, smooth)
+			end
+		end
+	else
+		disc(parent, "ObservatoryBase", pos + Vector3.new(0, 0.55, 0), 30, 1.1, world.Trim, Enum.Material.Metal, true)
+		disc(parent, "ObservatoryLens", pos + Vector3.new(0, 1.15, 0), 21, 0.3, world.Rock, Enum.Material.Glass, false)
+		local orbit = CFrame.new(pos + Vector3.new(0, 14, 0)) * CFrame.Angles(0.35, 0, 0.52)
+		orb(parent, "Planet", orbit.Position, Vector3.one * 14, rgb(145, 115, 245), smooth)
+		for index = 0, 23 do
+			local angle = index * math.pi / 12
+			local a = Vector3.new(math.cos(angle), 0, math.sin(angle)) * 11
+			local b = Vector3.new(math.cos(angle + math.pi / 12), 0, math.sin(angle + math.pi / 12)) * 11
+			beam(parent, "PlanetOrbit", orbit:PointToWorldSpace(a), orbit:PointToWorldSpace(b), 0.65, 0.65, world.Accent, Enum.Material.Neon)
+		end
+		for _, offset in {Vector3.new(-16, 19, 3), Vector3.new(15, 9, -8), Vector3.new(18, 23, 4)} do
+			orb(parent, "Moon", pos + offset, Vector3.one * 3.2, cream, Enum.Material.Neon)
+		end
+	end
+end
+
+local function makeMarketStall(parent: Model, world: World, buying: boolean)
+	local templateName = if buying then "GumStall" else "SellStall"
+	local template = assets:FindFirstChild(templateName)
+	assert(template and template:IsA("Model"), "Missing market model: " .. templateName)
+	local stall = template:Clone()
+	stall.Name = if buying then "GumShopStall" else "SellStation"
+	local origin = world.Center + Vector3.new(if buying then -32 else 32, 0.24, 29)
+	local frame = CFrame.new(origin)
+	local zoneColor = if buying then rgb(92, 174, 255) else rgb(70, 225, 179)
+
+	for _, item in stall:GetDescendants() do
+		if item:IsA("BasePart") then
+			item.CFrame = frame * item.CFrame
+			local shade = item:GetAttribute("RoofShade")
+			if world.Id ~= 1 and shade == "Light" then
+				item.Color = world.Trim
+			elseif world.Id ~= 1 and shade == "Dark" then
+				item.Color = world.Accent:Lerp(world.Rock, 0.45)
+			end
+		end
+	end
+
+	part(stall, "MarketFooting", Vector3.new(26, 0.4, 26), frame * CFrame.new(0, -0.04, -2), world.Path, Enum.Material.Cobblestone, true)
+	sign(stall, if buying then "GumShopSign" else "SellSign", if buying then "GUM SHOP" else "SELL BUBBLES",
+		frame * CFrame.new(0, 15.4, -11.8), 18.2, zoneColor)
+
+	local entrance = origin + Vector3.new(0, 0, -13.7)
+	disc(stall, "MarketEntrance", entrance + Vector3.new(0, 0.03, 0), 17, 0.26, zoneColor, smooth, true)
+	disc(stall, "MarketInlay", entrance + Vector3.new(0, 0.18, 0), 13, 0.11, zoneColor:Lerp(white, 0.47), smooth, false)
+	for _, x in {-8.7, 8.7} do
+		lantern(stall, entrance + Vector3.new(x, 0, -2.3), if buying then cream else zoneColor)
+	end
+
+	local zone = part(stall, if buying then "ShopZone" else "SellZone", Vector3.new(22, 8, 12),
+		CFrame.new(entrance + Vector3.new(0, 3.1, 0)), white, smooth, false)
 	zone.Transparency = 1
-	zone.CanCollide = false
-	zone.CanTouch = true
-	zone.CanQuery = false
+	zone.CastShadow = false
+	zone.CanTouch = not buying
+	stall.Parent = parent
+	if buying then CollectionService:AddTag(zone, "GumShopZone") end
 end
 
-local function makeGumShop(model: Model, center: Vector3, world)
-	local shop=Instance.new("Model") shop.Name="GumShopStall" shop.Parent=model
-	local base=center+Vector3.new(-42,2,24)
-	make(shop,"ShopFloor",Vector3.new(25,1,17),CFrame.new(base+Vector3.new(0,0.5,0)),Color3.fromRGB(151,105,67),Enum.Material.WoodPlanks)
-	make(shop,"Counter",Vector3.new(21,4,5),CFrame.new(base+Vector3.new(0,2.5,3)),Color3.fromRGB(125,79,52),Enum.Material.Wood)
-	make(shop,"CounterTop",Vector3.new(22,0.7,5.8),CFrame.new(base+Vector3.new(0,4.8,3)),Color3.fromRGB(244,220,170),Enum.Material.SmoothPlastic)
-	for _,x in ipairs({-10,10}) do make(shop,"CanopyPost",Vector3.new(1,9,1),CFrame.new(base+Vector3.new(x,5,-5)),Color3.fromRGB(116,78,53),Enum.Material.Wood) end
-	make(shop,"Canopy",Vector3.new(25,1.4,18),CFrame.new(base+Vector3.new(0,10,-1)),Color3.fromRGB(255,242,225),Enum.Material.SmoothPlastic)
-	for i=1,5 do make(shop,"CanopyStripe",Vector3.new(4.7,0.12,18.2),CFrame.new(base+Vector3.new(-10+(i-1)*5,10.8,-1)),i%2==0 and world.Accent or Color3.new(1,1,1),Enum.Material.SmoothPlastic).CanCollide=false end
-	local board=make(shop,"GumShopSign",Vector3.new(17,4,0.8),CFrame.new(base+Vector3.new(0,7.2,7.2)),world.Accent,Enum.Material.SmoothPlastic)
-	local gui=Instance.new("SurfaceGui") gui.Face=Enum.NormalId.Front gui.CanvasSize=Vector2.new(700,180) gui.Parent=board
-	local title=Instance.new("TextLabel") title.Size=UDim2.fromScale(1,1) title.BackgroundTransparency=1 title.Text="G U M   S H O P" title.TextColor3=Color3.fromRGB(45,48,62) title.Font=Enum.Font.GothamBlack title.TextScaled=true title.Parent=gui
-	local gumColors={Color3.fromRGB(255,110,180),Color3.fromRGB(110,220,130),Color3.fromRGB(120,170,255)}
-	for i,color in ipairs(gumColors) do
-		local x=-6+(i-1)*6
-		local jar=make(shop,"GumJar",Vector3.new(3.4,3.2,3.4),CFrame.new(base+Vector3.new(x,7,3)),color,Enum.Material.Glass,Enum.PartType.Cylinder)
-		jar.Transparency=0.12 jar.CanCollide=false
-		orb(shop,"GumDisplay",1.8,base+Vector3.new(x,8.8,3),color,Enum.Material.Neon).CanCollide=false
+local function makePortal(parent: Model, pos: Vector3, destination: World, direction: number)
+	local base = disc(parent, "Portal_" .. destination.Id, pos + Vector3.new(0, 0.52, 0), 15, 0.62, destination.Accent, smooth, true)
+	base:SetAttribute("TargetWorldId", destination.Id)
+	local face = CFrame.lookAt(pos, pos + Vector3.new(direction, 0, 0))
+	for _, side in {-1, 1} do
+		local foot = face:PointToWorldSpace(Vector3.new(side * 6.7, 2.1, 0))
+		local pier = face:PointToWorldSpace(Vector3.new(side * 6.7, 5.9, 0))
+		part(parent, "PortalFoot", Vector3.new(3.3, 4.2, 3.8), CFrame.new(foot) * face.Rotation, destination.Rock, Enum.Material.Slate, false)
+		part(parent, "PortalPier", Vector3.new(2.4, 6.5, 2.9), CFrame.new(pier) * face.Rotation, destination.Trim, Enum.Material.Slate, false)
 	end
+	for index = 0, 7 do
+		local a = index * math.pi / 8
+		local b = (index + 1) * math.pi / 8
+		local from = face:PointToWorldSpace(Vector3.new(math.cos(a) * 6.7, 8.6 + math.sin(a) * 6.7, 0))
+		local to = face:PointToWorldSpace(Vector3.new(math.cos(b) * 6.7, 8.6 + math.sin(b) * 6.7, 0))
+		beam(parent, "PortalArch", from, to, 2.3, 2.4, destination.Trim, Enum.Material.Slate)
+		local glow = (from + to) / 2 + face.LookVector * 1.25
+		orb(parent, "PortalGem", glow, Vector3.one, destination.Accent, Enum.Material.Neon)
+	end
+	sign(parent, "PortalSign", destination.Name, face * CFrame.new(0, 16.8, -0.25), 16.5, destination.Accent)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "WorldPrompt"
+	prompt.ActionText = if direction == -1 then "Unlock / Travel" else "Travel Back"
+	prompt.ObjectText = destination.Name
+	prompt.HoldDuration = 0.35
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = base
 end
 
-for _,world in ipairs(WORLDS) do
-	local model=Instance.new("Model") model.Name="World_"..world.Id.."_"..world.Name:gsub("%W","") model:SetAttribute("WorldId",world.Id) model.Parent=root
-	local center=world.Center
-	make(model,"FloatingRock",Vector3.new(34,170,170),CFrame.new(center+Vector3.new(0,-15,0))*CFrame.Angles(0,0,math.rad(90)),world.Rock,Enum.Material.Slate,Enum.PartType.Cylinder)
-	make(model,"IslandSurface",Vector3.new(8,158,158),CFrame.new(center-Vector3.new(0,2,0))*CFrame.Angles(0,0,math.rad(90)),world.Top,world.Material,Enum.PartType.Cylinder)
-	make(model,"IslandRim",Vector3.new(3,161,161),CFrame.new(center-Vector3.new(0,4.5,0))*CFrame.Angles(0,0,math.rad(90)),world.Accent,Enum.Material.Slate,Enum.PartType.Cylinder).CanCollide=false
-	local plaza=make(model,"SpawnPlaza",Vector3.new(1.5,44,44),CFrame.new(center+Vector3.new(0,3,0))*CFrame.Angles(0,0,math.rad(90)),world.Accent,Enum.Material.SmoothPlastic,Enum.PartType.Cylinder)
-	plaza.Transparency=0.08
-	local spawn=make(model,"WorldSpawn_"..world.Id,Vector3.new(8,1,8),CFrame.new(center+Vector3.new(0,5,0)),world.Top,Enum.Material.SmoothPlastic)
-	spawn.Transparency=1 spawn.CanCollide=false spawn:SetAttribute("WorldId",world.Id)
-	if world.Id==1 then
-		local main=Instance.new("SpawnLocation") main.Name="MainSpawn" main.Size=Vector3.new(8,1,8) main.CFrame=CFrame.new(center+Vector3.new(0,5,0)) main.Anchored=true main.Neutral=true main.Duration=0 main.Transparency=1 main.CanCollide=false main.Parent=model
+local sceneryPositions = {
+	Vector3.new(-54, 0, -33), Vector3.new(-40, 0, -46), Vector3.new(42, 0, -45),
+	Vector3.new(55, 0, -31), Vector3.new(-43, 0, 52), Vector3.new(42, 0, 52),
+	Vector3.new(-19, 0, 61), Vector3.new(19, 0, 61),
+}
+
+for _, world in worlds do
+	local center = world.Center
+	local random = Random.new(1284 + world.Id)
+	local island = Instance.new("Model")
+	island.Name = "World_" .. world.Id .. "_" .. world.Name:gsub("%W", "")
+	island:SetAttribute("WorldId", world.Id)
+	island.Parent = root
+
+	makeIsland(island, world, random)
+	disc(island, "PlazaBorder", center + Vector3.new(0, 0.25, 0), 32, 0.5, timber, Enum.Material.WoodPlanks, true)
+	disc(island, "SpawnPlaza", center + Vector3.new(0, 0.44, 0), 28, 0.25, world.Path, Enum.Material.Cobblestone, true)
+	local spawn = part(island, "WorldSpawn_" .. world.Id, Vector3.new(8, 1, 8), CFrame.new(center + Vector3.new(0, 1.1, 0)),
+		world.Ground, smooth, false)
+	spawn.Transparency = 1
+	spawn:SetAttribute("WorldId", world.Id)
+	if world.Id == 1 then
+		local main = Instance.new("SpawnLocation")
+		main.Name = "MainSpawn"
+		main.Size = spawn.Size
+		main.CFrame = spawn.CFrame
+		main.Anchored = true
+		main.Neutral = true
+		main.Duration = 0
+		main.Transparency = 1
+		main.CanCollide = false
+		main.Parent = island
 	end
 
-	make(model,"MainPath",Vector3.new(36,0.25,9),CFrame.new(center+Vector3.new(-24,2.12,13)),world.Path,Enum.Material.Cobblestone)
-	make(model,"SellPath",Vector3.new(36,0.25,9),CFrame.new(center+Vector3.new(25,2.12,13)),world.Path,Enum.Material.Cobblestone)
-	make(model,"PortalPath",Vector3.new(9,0.25,38),CFrame.new(center+Vector3.new(36,2.12,-18)),world.Path,Enum.Material.Cobblestone)
-
-	for i,offset in ipairs({Vector3.new(-60,3,-42),Vector3.new(60,3,-42),Vector3.new(-60,3,42),Vector3.new(60,3,42),Vector3.new(-67,3,0),Vector3.new(67,3,0)}) do
-		if world.Id==4 then
-			make(model,"Crystal",Vector3.new(7,20+(i%3)*4,7),CFrame.new(center+offset+Vector3.new(0,10,0))*CFrame.Angles(0,math.rad(i*25),math.rad(8)),world.Accent,Enum.Material.Neon)
-			orb(model,"Star",3,center+offset+Vector3.new(5,17,3),Color3.new(1,1,1),Enum.Material.Neon).CanCollide=false
-		else makeTree(model,center+offset,world,i) end
+	for _, stop in {Vector3.new(-32, 0, 15), Vector3.new(32, 0, 15), Vector3.new(0, 0, -24)} do
+		local floor = center + Vector3.new(0, 0.05, 0)
+		beam(island, "PlazaPath", floor, floor + stop, 8, 0.1, world.Path, Enum.Material.Cobblestone)
 	end
-	makeLamp(model,center+Vector3.new(-22,3,-26),world.Accent)
-	makeLamp(model,center+Vector3.new(22,3,-26),world.Accent)
-	makeSign(model,world.Name,center+Vector3.new(0,3,-57),world.Accent,26)
-	makeWorldLandmark(model, world, center)
-
-	if world.Id==1 then
-		makeGumShop(model,center,world)
-		local zone=make(model,"ShopZone",Vector3.new(34,12,28),CFrame.new(center+Vector3.new(-42,6,24)),Color3.new(1,1,1),Enum.Material.SmoothPlastic)
-		zone.Transparency=1 zone.CanCollide=false zone.CanTouch=false
+	for _, side in {-1, 1} do
+		local destination = worlds[world.Id + side]
+		if destination then
+			local floor = center + Vector3.new(0, 0.05, 0)
+			beam(island, "PortalPath", floor, floor + Vector3.new(side * 59, 0, 0), 8, 0.1, world.Path, Enum.Material.Cobblestone)
+			makePortal(island, center + Vector3.new(side * 59, 0, 0), destination, -side)
+		end
+		lantern(island, center + Vector3.new(side * 13, 0, -12), cream)
 	end
-	makeSellStation(model, center, world)
-	if world.Id<#WORLDS then makePortal(model,world,center+Vector3.new(52,4,0),world.Id+1,"Unlock / Travel") end
-	if world.Id>1 then makePortal(model,world,center+Vector3.new(-52,4,0),world.Id-1,"Travel Back") end
+
+	makeLandmark(island, world)
+	for _, offset in sceneryPositions do
+		local pos = center + offset
+		local size = random:NextNumber(5.6, 9.2)
+		if world.Id == 4 then
+			part(island, "MeteorCrystal", Vector3.new(size * 0.63, size * 1.6, size * 0.64),
+				CFrame.new(pos + Vector3.new(0, size * 0.7, 0)) * CFrame.Angles(0.16, size, 0.22), world.Trim, Enum.Material.Glass, true)
+			orb(island, "MeteorGlow", pos + Vector3.new(0, size * 1.68, 0), Vector3.one * 1.75, world.Accent, Enum.Material.Neon)
+		else
+			foliage(island, world, pos, size, random)
+		end
+		for index = 1, 4 do
+			local spread = Vector3.new(random:NextNumber(-6, 6), 0.6, random:NextNumber(-5, 5))
+			orb(island, "GroundCover", pos + spread, Vector3.new(2, 1.1, 1.8),
+				if index % 2 == 0 then world.Trim else world.Accent, world.Material)
+		end
+	end
+
+	sign(island, "IslandSign", world.Name, CFrame.lookAt(center + Vector3.new(0, 6.5, -22), center + Vector3.new(0, 6.5, 0)),
+		19, world.Trim:Lerp(white, 0.3))
+	local groundY = center.Y
+	for _, x in {-7.8, 7.8} do
+		part(island, "IslandSignPost", Vector3.new(0.6, 6.3, 0.7),
+			CFrame.new(center.X + x, groundY + 3.15, center.Z - 22.4), timber, Enum.Material.Wood, false)
+	end
+
+	makeMarketStall(island, world, true)
+	makeMarketStall(island, world, false)
+
+	for index = 1, 5 do
+		local cloud = center + Vector3.new(random:NextNumber(-96, 96), random:NextNumber(-37, -29), random:NextNumber(-82, 82))
+		for cluster = -1, 1 do
+			local fluff = orb(island, "Cloud", cloud + Vector3.new(cluster * 8, random:NextNumber(-1, 2), 0),
+				Vector3.new(21, 5.8, 12) * random:NextNumber(0.7, 1.1), white:Lerp(world.Trim, 0.22), smooth)
+			fluff.Transparency = 0.26 + index * 0.035
+			fluff.CastShadow = false
+		end
+	end
 end
-
-for i=1,#WORLDS-1 do
-	local a,b=WORLDS[i].Center,WORLDS[i+1].Center
-	local bridge=make(root,"Bridge_"..i,Vector3.new(26,3,(b-a).Magnitude-105),CFrame.lookAt((a+b)/2+Vector3.new(0,-2,0),b),WORLDS[i].Accent,Enum.Material.SmoothPlastic)
-	bridge.CanCollide=false
-end
-print("[BubbleWorld] Built four themed islands, paths, lamps, portals, starter gum shop, and sell platform.")

@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -175,16 +176,22 @@ end)
 local function updateShopProximity()
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local zone = workspace:FindFirstChild("ShopZone", true)
 	local shouldBeInside = false
 
-	if root and root:IsA("BasePart") and zone and zone:IsA("BasePart") then
-		local localPosition = zone.CFrame:PointToObjectSpace(root.Position)
-		local half = zone.Size * 0.5
-		local margin = insideShop and 6.5 or 3.5
-		shouldBeInside = math.abs(localPosition.X) <= half.X + margin
-			and math.abs(localPosition.Z) <= half.Z + margin
-			and math.abs(localPosition.Y) <= half.Y + (insideShop and 14 or 10)
+	if root and root:IsA("BasePart") then
+		local margin = insideShop and 1.5 or 0
+		for _, zone in CollectionService:GetTagged("GumShopZone") do
+			if zone:IsA("BasePart") and zone:IsDescendantOf(workspace) then
+				local position = zone.CFrame:PointToObjectSpace(root.Position)
+				local half = zone.Size * 0.5
+				if math.abs(position.X) <= half.X + margin
+					and math.abs(position.Z) <= half.Z + margin
+					and math.abs(position.Y) <= half.Y then
+					shouldBeInside = true
+					break
+				end
+			end
+		end
 	end
 
 	if shouldBeInside ~= insideShop then

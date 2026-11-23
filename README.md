@@ -6,7 +6,7 @@ A Roblox bubble simulator built with Luau. The current gameplay foundation inclu
 
 Download [BubbleGumSimulator.rbxl](BubbleGumSimulator.rbxl), open it in Roblox Studio, and press **Play** (F5). The four islands generate when the server starts. Click or tap to blow a bubble, then use **SELL** or walk onto a marked sell platform. Visit the **GUM SHOP** to buy upgrades.
 
-The place includes the server and client scripts. Local play works without DataStore access, with progress lasting for the current session.
+The place includes the server and client scripts. Each island has a gum shop and a bubble sale stall. Grassland uses the original wooden stalls from `place.rbxl`, and the other islands use the same buildings with roofs matched to their surroundings. Local play works without DataStore access, with progress lasting for the current session.
 
 ## Gameplay loop
 
@@ -38,9 +38,9 @@ Run this command from the repository root with [Rojo 7.7.1](https://github.com/r
 rojo build --output BubbleGumSimulator.rbxl
 ```
 
-`default.project.json` maps `src/server/*.server.luau` to Scripts under `ServerScriptService` and `src/client/*.client.luau` to LocalScripts under `StarterPlayer/StarterPlayerScripts`. Use `rojo serve` and the Rojo Studio plugin to sync edits during development. `place.rbxl` is the earlier Studio project.
+`default.project.json` maps `src/server/*.server.luau` to Scripts under `ServerScriptService`, `src/client/*.client.luau` to LocalScripts under `StarterPlayer/StarterPlayerScripts`, and the stall models in `assets/world` to `ServerStorage/WorldAssets`. Use `rojo serve` and the Rojo Studio plugin to sync edits during development. `place.rbxl` is the earlier Studio project.
 
-The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically, including animated gameplay notifications for sales, level-ups, gum upgrades, world unlocks, and Rebirth. WorldBuilder creates `Workspace/BubbleWorld`, four themed islands with paths, lamps, trees/crystals, portal frames, the starter wooden gum-shop kiosk, `ShopZone`, and a marked bubble-selling platform with `SellZone`. The gum shop UI opens when the player enters the shop area; the server independently validates the player's position before accepting a purchase. The XP/level widget is positioned compactly on the left side of the screen. WorldBuilder replaces the generated `BubbleWorld` folder each time the server starts.
+The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically, including animated notifications for sales, level-ups, gum upgrades, world unlocks, and Rebirth. WorldBuilder creates `Workspace/BubbleWorld` with four floating islands and their market paths and portals. A fountain, glacier, tiered cake, and observatory mark the four islands. The gum shop opens at each blue entrance, and the server validates the player's position before accepting a purchase. The green entrances mark the sell zones.
 
 ## DataStore setup
 
@@ -55,13 +55,9 @@ The server keeps the existing `BubbleGumSim_Save_v1` DataStore name to preserve 
 
 - Run **Start Server** with at least two clients.
 - Confirm WorldBuilder creates four islands and portal prompts.
-- Confirm the player spawns on Grassland and cannot walk across decorative bridges to skip unlocks.
+- Confirm the player spawns on Grassland, then check the shop entrance and sell pad on each island.
 - Test world unlocks at the required level and coin balance.
 - Test XP, Level, gum purchases, selling, and Rebirth.
 - Test that a player cannot unlock a world by sending a forged remote request.
 - Test leave/rejoin and DataStore failures.
 - Test on a phone-sized emulator and a low-end device.
-
-## Current scope / next polish
-
-The generated world now has a more complete low-poly art blockout and a physical starter gum-shop kiosk, but it still needs custom meshes, terrain detailing, music, sound effects, particles, world-specific shop/sell stations, more quests, balancing, and full in-Studio playtesting. Pets and eggs are deliberately excluded.
