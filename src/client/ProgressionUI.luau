@@ -47,26 +47,26 @@ local function makeLabel(parent: Instance, name: string, size: UDim2, position: 
 	return label
 end
 
--- Compact XP bar under the existing top stats HUD.
+-- Minimal XP widget on the left side, clear of the center gameplay view.
 local xpPanel = Instance.new("Frame")
 xpPanel.Name = "XPPanel"
-xpPanel.AnchorPoint = Vector2.new(0.5, 0)
-xpPanel.Position = UDim2.new(0.5, 0, 0, 64)
-xpPanel.Size = UDim2.new(1, -24, 0, 42)
+xpPanel.AnchorPoint = Vector2.new(0, 0)
+xpPanel.Position = UDim2.fromOffset(16, 92)
+xpPanel.Size = UDim2.fromOffset(214, 58)
 xpPanel.BackgroundColor3 = Color3.fromRGB(24, 26, 36)
-xpPanel.BackgroundTransparency = 0.08
+xpPanel.BackgroundTransparency = 0.16
 xpPanel.BorderSizePixel = 0
 xpPanel.Parent = gui
 round(xpPanel, 12)
 
-local levelLabel = makeLabel(xpPanel, "LevelLabel", UDim2.new(0, 105, 1, 0), UDim2.fromOffset(12, 0), "LEVEL 1", 13)
-local rebirthLabel = makeLabel(xpPanel, "RebirthLabel", UDim2.new(0, 80, 1, 0), UDim2.new(1, -90, 0, 0), "REBIRTH 0", 11)
+local levelLabel = makeLabel(xpPanel, "LevelLabel", UDim2.new(0.55, -12, 0, 22), UDim2.fromOffset(12, 5), "LEVEL 1", 13)
+local rebirthLabel = makeLabel(xpPanel, "RebirthLabel", UDim2.new(0.45, -12, 0, 22), UDim2.new(0.55, 0, 0, 5), "REBIRTH 0", 10)
 rebirthLabel.TextXAlignment = Enum.TextXAlignment.Right
 
 local track = Instance.new("Frame")
 track.Name = "XPTrack"
-track.Position = UDim2.new(0, 118, 0.5, -7)
-track.Size = UDim2.new(1, -220, 0, 14)
+track.Position = UDim2.fromOffset(12, 34)
+track.Size = UDim2.new(1, -24, 0, 13)
 track.BackgroundColor3 = Color3.fromRGB(52, 58, 75)
 track.BorderSizePixel = 0
 track.Parent = xpPanel
@@ -80,8 +80,16 @@ fill.BorderSizePixel = 0
 fill.Parent = track
 round(fill, 8)
 
-local xpText = makeLabel(xpPanel, "XPText", UDim2.new(1, -220, 1, 0), UDim2.new(0, 118, 0, 0), "0 / 100 XP", 10)
-xpText.TextXAlignment = Enum.TextXAlignment.Center
+local xpText = Instance.new("TextLabel")
+xpText.Name = "XPText"
+xpText.Size = UDim2.fromScale(1, 1)
+xpText.BackgroundTransparency = 1
+xpText.Text = "0 / 100 XP"
+xpText.TextColor3 = Color3.fromRGB(255, 255, 255)
+xpText.TextStrokeTransparency = 0.65
+xpText.Font = Enum.Font.GothamBold
+xpText.TextSize = 9
+xpText.Parent = track
 
 -- World selector.
 local worldToggle = Instance.new("TextButton")
