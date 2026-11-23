@@ -1,6 +1,7 @@
 --!strict
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -53,12 +54,51 @@ local function setVisualBubble(targetPlayer: Player, amount: number, color: Colo
 		weld.C0 = CFrame.new(0, 0.2, -1.1)
 		weld.Parent = part
 
+		local light = Instance.new("PointLight")
+		light.Name = "BubbleGlow"
+		light.Brightness = 0.65
+		light.Range = 10
+		light.Parent = part
+
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "SparkleAttachment"
+		attachment.Parent = part
+		local sparkles = Instance.new("ParticleEmitter")
+		sparkles.Name = "BubbleSparkles"
+		sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		sparkles.Rate = 2
+		sparkles.Lifetime = NumberRange.new(0.35, 0.7)
+		sparkles.Speed = NumberRange.new(0.25, 0.8)
+		sparkles.SpreadAngle = Vector2.new(180, 180)
+		sparkles.LightEmission = 0.8
+		sparkles.Size = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.16),
+			NumberSequenceKeypoint.new(1, 0),
+		})
+		sparkles.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.1),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		sparkles.Parent = attachment
+
 		bubblesByUser[userId] = part
 	end
 
 	local radius = math.clamp(1 + math.log10(amount + 1) * 3.5, 1, 16)
-	part.Size = Vector3.one * radius
 	part.Color = color
+	local glow = part:FindFirstChild("BubbleGlow")
+	if glow and glow:IsA("PointLight") then
+		glow.Color = color
+		glow.Range = math.clamp(radius * 2.2, 8, 28)
+	end
+	local sparkles = part:FindFirstChild("SparkleAttachment")
+	local emitter = sparkles and sparkles:FindFirstChild("BubbleSparkles")
+	if emitter and emitter:IsA("ParticleEmitter") then
+		emitter:Emit(3)
+	end
+	TweenService:Create(part, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = Vector3.one * radius,
+	}):Play()
 
 	local weld = part:FindFirstChild("BubbleWeld")
 	if weld and weld:IsA("Weld") then
