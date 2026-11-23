@@ -149,7 +149,7 @@ for index = 1, #WORLDS - 1 do
 	local b = WORLDS[index + 1].Center
 	local midpoint = (a + b) / 2
 	local bridge = makePart(root, "Bridge_" .. tostring(index), Vector3.new(26, 3, (b - a).Magnitude - 105), CFrame.lookAt(midpoint + Vector3.new(0, -2, 0), b), WORLDS[index].Accent, Enum.Material.SmoothPlastic)
-	bridge.CanCollide = true
+	bridge.CanCollide = false
 end
 
 -- Starter island interaction zones used by the shop and sell scripts.
