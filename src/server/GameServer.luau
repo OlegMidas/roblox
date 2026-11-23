@@ -314,7 +314,7 @@ local function sellBubble(player: Player)
 end
 
 local function isPlayerAtShop(player: Player): boolean
-	local zone = workspace:FindFirstChild("ShopZone")
+	local zone = workspace:FindFirstChild("ShopZone", true)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not zone or not zone:IsA("BasePart") or not root then
@@ -369,7 +369,7 @@ local function getWorldSpawn(worldId: number): BasePart?
 	local worldFolder = workspace:FindFirstChild("BubbleWorld")
 	if not worldFolder then return nil end
 	for _, descendant in ipairs(worldFolder:GetDescendants()) do
-		if descendant:IsA("SpawnLocation") and descendant:GetAttribute("WorldId") == worldId then
+		if descendant:IsA("BasePart") and descendant.Name == "WorldSpawn_" .. tostring(worldId) and descendant:GetAttribute("WorldId") == worldId then
 			return descendant
 		end
 	end
@@ -421,12 +421,22 @@ end
 workspace.DescendantAdded:Connect(bindWorldPrompt)
 
 worldActionEvent.OnServerEvent:Connect(function(player, worldIdRaw)
+	if not canPerform(player, "World", WORLD_COOLDOWN) then return end
 	local worldId = tonumber(worldIdRaw)
-	if not worldId or worldId % 1 ~= 0 then return end
-	local spawn = getWorldSpawn(worldId)
-	if spawn and sessionData[player] and sessionData[player].UnlockedWorlds[worldId] then
-		teleportToWorld(player, worldId)
+	if not worldId or worldId % 1 ~= 0 or not WORLDS[worldId] then return end
+	local data = sessionData[player]
+	if not data or not getWorldSpawn(worldId) then return end
+
+	if not data.UnlockedWorlds[worldId] then
+		local world = WORLDS[worldId]
+		if worldId <= 1 or not data.UnlockedWorlds[worldId - 1] then return end
+		if data.PlayerLevel < world.RequiredLevel or data.Coins < world.Cost then return end
+		data.Coins -= world.Cost
+		data.UnlockedWorlds[worldId] = true
+		syncPlayerState(player)
 	end
+
+	teleportToWorld(player, worldId)
 end)
 
 rebirthActionEvent.OnServerEvent:Connect(function(player)
@@ -455,10 +465,11 @@ local function hookSellZone(instance: Instance)
 	end)
 end
 
-local sellZone = workspace:FindFirstChild("SellZone")
-if sellZone then hookSellZone(sellZone) end
-workspace.ChildAdded:Connect(function(child)
-	if child.Name == "SellZone" then hookSellZone(child) end
+for _, descendant in ipairs(workspace:GetDescendants()) do
+	if descendant.Name == "SellZone" then hookSellZone(descendant) end
+end
+workspace.DescendantAdded:Connect(function(descendant)
+	if descendant.Name == "SellZone" then hookSellZone(descendant) end
 end)
 
 local function createLeaderstats(player: Player)
