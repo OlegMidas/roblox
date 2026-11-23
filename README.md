@@ -34,6 +34,7 @@ src/
     BubbleHUD.luau
     GumShopUI.luau
     ProgressionUI.luau
+    FeedbackUI.luau
   server/
     GameServer.luau
     WorldBuilder.server.luau
@@ -51,8 +52,9 @@ The `.rbxl` file is a binary Studio place. The Luau source files must be install
 | `src/client/BubbleHUD.luau` | `StarterPlayer/StarterPlayerScripts/BubbleHUD` | LocalScript |
 | `src/client/GumShopUI.luau` | `StarterPlayer/StarterPlayerScripts/GumShopUI` | LocalScript |
 | `src/client/ProgressionUI.luau` | `StarterPlayer/StarterPlayerScripts/ProgressionUI` | LocalScript |
+| `src/client/FeedbackUI.luau` | `StarterPlayer/StarterPlayerScripts/FeedbackUI` | LocalScript |
 
-The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically. WorldBuilder creates `Workspace/BubbleWorld`, four themed islands with paths, lamps, trees/crystals, portal frames, the starter wooden gum-shop kiosk, `ShopZone`, and a marked bubble-selling platform with `SellZone`. The gum shop UI opens when the player enters the shop area; the server independently validates the player's position before accepting a purchase. The XP/level widget is positioned compactly on the left side of the screen. WorldBuilder replaces the generated `BubbleWorld` folder each time the server starts.
+The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically, including animated gameplay notifications for sales, level-ups, gum upgrades, world unlocks, and Rebirth. WorldBuilder creates `Workspace/BubbleWorld`, four themed islands with paths, lamps, trees/crystals, portal frames, the starter wooden gum-shop kiosk, `ShopZone`, and a marked bubble-selling platform with `SellZone`. The gum shop UI opens when the player enters the shop area; the server independently validates the player's position before accepting a purchase. The XP/level widget is positioned compactly on the left side of the screen. WorldBuilder replaces the generated `BubbleWorld` folder each time the server starts.
 
 **Important:** Do not place `WorldBuilder.server.luau` in Workspace or StarterPlayer. It must run as a server Script under ServerScriptService.
 
