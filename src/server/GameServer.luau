@@ -87,6 +87,11 @@ local sellBubblesEvent = getOrCreateRemote("SellBubbles")
 local shopActionEvent = getOrCreateRemote("ShopAction")
 local worldActionEvent = getOrCreateRemote("WorldAction")
 local rebirthActionEvent = getOrCreateRemote("RebirthAction")
+local toastEvent = getOrCreateRemote("Toast")
+
+local function notifyPlayer(player: Player, title: string, message: string, color: Color3?)
+	toastEvent:FireClient(player, title, message, color or Color3.fromRGB(100, 210, 255))
+end
 
 local sessionData: {[Player]: any} = {}
 local lastActionAt: {[Player]: {[string]: number}} = {}
@@ -266,6 +271,7 @@ end
 local function awardXP(player: Player, amount: number)
 	local data = sessionData[player]
 	if not data or amount <= 0 then return end
+	local previousLevel = data.PlayerLevel
 	data.XP += math.floor(amount)
 	while data.PlayerLevel < 1000 do
 		local needed = xpRequired(data.PlayerLevel)
@@ -274,6 +280,9 @@ local function awardXP(player: Player, amount: number)
 		data.PlayerLevel += 1
 	end
 	syncPlayerState(player)
+	if data.PlayerLevel > previousLevel then
+		notifyPlayer(player, "LEVEL UP!", "You reached level " .. tostring(data.PlayerLevel), Color3.fromRGB(105, 235, 155))
+	end
 end
 
 local function getWorldMultiplier(player: Player): number
@@ -305,6 +314,7 @@ local function sellBubble(player: Player)
 	if reward <= 0 then return end
 
 	data.Coins += reward
+	notifyPlayer(player, "BUBBLES SOLD!", "+" .. tostring(reward) .. " Coins", Color3.fromRGB(105, 235, 155))
 	local soldSize = data.BubbleSize
 	data.BubbleSize = 0
 	syncPlayerState(player)
@@ -349,6 +359,7 @@ local function handleShopAction(player: Player, gumIdRaw)
 
 	data.BubbleSize = math.min(data.BubbleSize, gum.MaxBubble)
 	syncPlayerState(player)
+	notifyPlayer(player, "GUM UPGRADED!", gum.Name .. " equipped • +" .. tostring(gum.Power) .. " power", gum.Color)
 end
 
 blowEvent.OnServerEvent:Connect(function(player)
@@ -452,6 +463,7 @@ rebirthActionEvent.OnServerEvent:Connect(function(player)
 	data.XP = 0
 	data.PlayerLevel = 1
 	syncPlayerState(player)
+	notifyPlayer(player, "REBIRTH COMPLETE!", "Permanent coin multiplier increased!", Color3.fromRGB(210, 135, 255))
 end)
 
 local function hookSellZone(instance: Instance)
