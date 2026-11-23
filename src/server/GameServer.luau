@@ -412,6 +412,7 @@ local function handleWorldPrompt(player: Player, prompt: ProximityPrompt)
 		data.Coins -= world.Cost
 		data.UnlockedWorlds[targetId] = true
 		syncPlayerState(player)
+		notifyPlayer(player, "WORLD UNLOCKED!", "Welcome to " .. world.Name .. "!", Color3.fromRGB(115, 205, 255))
 	end
 
 	teleportToWorld(player, targetId)
@@ -445,6 +446,7 @@ worldActionEvent.OnServerEvent:Connect(function(player, worldIdRaw)
 		data.Coins -= world.Cost
 		data.UnlockedWorlds[worldId] = true
 		syncPlayerState(player)
+		notifyPlayer(player, "WORLD UNLOCKED!", "Welcome to " .. world.Name .. "!", Color3.fromRGB(115, 205, 255))
 	end
 
 	teleportToWorld(player, worldId)
