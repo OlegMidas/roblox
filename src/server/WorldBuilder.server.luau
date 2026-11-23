@@ -87,6 +87,19 @@ for _, world in ipairs(WORLDS) do
 	spawn.CanCollide = false
 	spawn:SetAttribute("WorldId", world.Id)
 
+	if world.Id == 1 then
+		local startSpawn = Instance.new("SpawnLocation")
+		startSpawn.Name = "MainSpawn"
+		startSpawn.Size = Vector3.new(8, 1, 8)
+		startSpawn.CFrame = CFrame.new(center + Vector3.new(0, 5, 0))
+		startSpawn.Anchored = true
+		startSpawn.Neutral = true
+		startSpawn.Duration = 0
+		startSpawn.Transparency = 1
+		startSpawn.CanCollide = false
+		startSpawn.Parent = model
+	end
+
 	-- Decorative props are anchored and deliberately low-part-count.
 	local offsets = {
 		Vector3.new(-48, 3, -38), Vector3.new(48, 3, -38),
