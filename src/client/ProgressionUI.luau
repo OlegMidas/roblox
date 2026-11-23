@@ -189,7 +189,7 @@ local function update()
 		elseif isUnlocked(world.Id - 1) then
 			button.Text = string.format("UNLOCK %s  •  LV.%d", world.Cost >= 1000 and (tostring(world.Cost / 1000) .. "K") or tostring(world.Cost), world.RequiredLevel)
 			button.BackgroundColor3 = (coins >= world.Cost and level >= world.RequiredLevel) and Color3.fromRGB(55, 130, 85) or Color3.fromRGB(90, 65, 72)
-			button.Active = true
+			button.Active = coins >= world.Cost and level >= world.RequiredLevel
 		else
 			button.Text = "LOCKED  •  " .. world.Name
 			button.BackgroundColor3 = Color3.fromRGB(55, 58, 68)
@@ -199,9 +199,11 @@ local function update()
 
 	if level >= REBIRTH_LEVEL and coins >= REBIRTH_COINS then
 		rebirthButton.Text = "REBIRTH  •  READY"
+		rebirthButton.Active = true
 		rebirthButton.BackgroundColor3 = Color3.fromRGB(165, 85, 220)
 	else
 		rebirthButton.Text = string.format("REBIRTH  •  LV.%d / %dK", REBIRTH_LEVEL, REBIRTH_COINS / 1000)
+		rebirthButton.Active = false
 		rebirthButton.BackgroundColor3 = Color3.fromRGB(90, 65, 110)
 	end
 end
