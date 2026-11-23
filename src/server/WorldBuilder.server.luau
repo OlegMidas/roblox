@@ -84,11 +84,9 @@ for _,world in ipairs(WORLDS) do
 		local main=Instance.new("SpawnLocation") main.Name="MainSpawn" main.Size=Vector3.new(8,1,8) main.CFrame=CFrame.new(center+Vector3.new(0,5,0)) main.Anchored=true main.Neutral=true main.Duration=0 main.Transparency=1 main.CanCollide=false main.Parent=model
 	end
 
-	for _,entry in ipairs({
-		{"MainPath",Vector3.new(-24,2.12,13),Vector3.new(36,0.25,9)},
-		{"SellPath",Vector3.new(25,2.12,13),Vector3.new(36,0.25,9)},
-		{"PortalPath",Vector3.new(36,2.12,-18),Vector3.new(9,0.25,38)},
-	}) do make(model,entry[1],entry[3],CFrame.new(center+entry[2]),world.Path,Enum.Material.Cobblestone) end
+	make(model,"MainPath",Vector3.new(36,0.25,9),CFrame.new(center+Vector3.new(-24,2.12,13)),world.Path,Enum.Material.Cobblestone)
+	make(model,"SellPath",Vector3.new(36,0.25,9),CFrame.new(center+Vector3.new(25,2.12,13)),world.Path,Enum.Material.Cobblestone)
+	make(model,"PortalPath",Vector3.new(9,0.25,38),CFrame.new(center+Vector3.new(36,2.12,-18)),world.Path,Enum.Material.Cobblestone)
 
 	for i,offset in ipairs({Vector3.new(-60,3,-42),Vector3.new(60,3,-42),Vector3.new(-60,3,42),Vector3.new(60,3,42),Vector3.new(-67,3,0),Vector3.new(67,3,0)}) do
 		if world.Id==4 then
