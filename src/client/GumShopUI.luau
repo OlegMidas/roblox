@@ -57,7 +57,7 @@ end)
 local window = Instance.new("Frame")
 window.Name = "ShopWindow"
 window.AnchorPoint = Vector2.new(0.5, 0.5)
-window.Size = UDim2.new(0.9, 0, 0, 310)
+window.Size = UDim2.new(0.9, 0, 0, 350)
 window.Position = UDim2.fromScale(0.5, 0.5)
 window.BackgroundColor3 = Color3.fromRGB(24, 26, 36)
 window.BorderSizePixel = 0
@@ -65,8 +65,8 @@ window.Visible = false
 window.Parent = screenGui
 
 local windowLimit = Instance.new("UISizeConstraint")
-windowLimit.MinSize = Vector2.new(280, 260)
-windowLimit.MaxSize = Vector2.new(420, 380)
+windowLimit.MinSize = Vector2.new(280, 300)
+windowLimit.MaxSize = Vector2.new(440, 420)
 windowLimit.Parent = window
 
 local windowCorner = Instance.new("UICorner")
@@ -84,9 +84,21 @@ title.BackgroundTransparency = 1
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 18
+title.TextSize = 20
 title.Text = "GUM SHOP"
 title.Parent = window
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.Size = UDim2.new(1, -32, 0, 18)
+subtitle.Position = UDim2.fromOffset(16, 34)
+subtitle.BackgroundTransparency = 1
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.TextColor3 = Color3.fromRGB(160, 170, 195)
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextSize = 10
+subtitle.Text = "Upgrade your bubble power and capacity"
+subtitle.Parent = window
 
 local coinsLabel = Instance.new("TextLabel")
 coinsLabel.Size = UDim2.fromOffset(112, 40)
@@ -117,8 +129,8 @@ end)
 
 local listFrame = Instance.new("ScrollingFrame")
 listFrame.Name = "GumList"
-listFrame.Size = UDim2.new(1, -20, 1, -54)
-listFrame.Position = UDim2.fromOffset(10, 48)
+listFrame.Size = UDim2.new(1, -20, 1, -72)
+listFrame.Position = UDim2.fromOffset(10, 66)
 listFrame.BackgroundTransparency = 1
 listFrame.BorderSizePixel = 0
 listFrame.ScrollBarThickness = 4
@@ -142,8 +154,8 @@ local rowButtons = {}
 for _, gum in ipairs(GUMS) do
 	local row = Instance.new("Frame")
 	row.Name = gum.Name .. "Row"
-	row.Size = UDim2.new(1, -4, 0, 50)
-	row.BackgroundColor3 = Color3.fromRGB(39, 43, 58)
+	row.Size = UDim2.new(1, -4, 0, 56)
+	row.BackgroundColor3 = Color3.fromRGB(34, 39, 54)
 	row.BorderSizePixel = 0
 	row.Parent = listFrame
 	local rowCorner = Instance.new("UICorner")
@@ -167,12 +179,12 @@ for _, gum in ipairs(GUMS) do
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.TextColor3 = Color3.fromRGB(242, 244, 250)
 	label.Font = Enum.Font.Gotham
-	label.TextSize = 12
-	label.Text = string.format("%s  •  +%d/click\nMax bubble: %d", gum.Name, gum.Power, gum.MaxBubble)
+	label.TextSize = 11
+	label.Text = string.format("%s  •  +%d / click\nCapacity: %d bubbles", gum.Name, gum.Power, gum.MaxBubble)
 	label.Parent = row
 
 	local actionButton = Instance.new("TextButton")
-	actionButton.Size = UDim2.fromOffset(112, 34)
+	actionButton.Size = UDim2.fromOffset(116, 36)
 	actionButton.AnchorPoint = Vector2.new(1, 0.5)
 	actionButton.Position = UDim2.new(1, -8, 0.5, 0)
 	actionButton.BackgroundColor3 = Color3.fromRGB(65, 130, 220)
