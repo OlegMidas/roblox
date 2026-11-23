@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local DATASTORE_NAME = "BubbleGumSim_Save_v2"
+local DATASTORE_NAME = "BubbleGumSim_Save_v1"
 local AUTOSAVE_INTERVAL = 120
 local BLOW_COOLDOWN = 0.08
 local SELL_COOLDOWN = 0.5
