@@ -52,7 +52,7 @@ The `.rbxl` file is a binary Studio place. The Luau source files must be install
 | `src/client/GumShopUI.luau` | `StarterPlayer/StarterPlayerScripts/GumShopUI` | LocalScript |
 | `src/client/ProgressionUI.luau` | `StarterPlayer/StarterPlayerScripts/ProgressionUI` | LocalScript |
 
-The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically. WorldBuilder creates `Workspace/BubbleWorld`, the four islands, portal prompts, bridges, the starter `ShopZone`, and `SellZone`. It replaces the generated `BubbleWorld` folder each time the server starts.
+The server creates `ReplicatedStorage/Remotes` and its RemoteEvents automatically. WorldBuilder creates `Workspace/BubbleWorld`, four themed islands with paths, lamps, trees/crystals, portal frames, the starter wooden gum-shop kiosk, `ShopZone`, and a marked bubble-selling platform with `SellZone`. The gum shop UI opens when the player enters the shop area; the server independently validates the player's position before accepting a purchase. The XP/level widget is positioned compactly on the left side of the screen. WorldBuilder replaces the generated `BubbleWorld` folder each time the server starts.
 
 **Important:** Do not place `WorldBuilder.server.luau` in Workspace or StarterPlayer. It must run as a server Script under ServerScriptService.
 
@@ -78,4 +78,4 @@ The server keeps the existing `BubbleGumSim_Save_v1` DataStore name to preserve 
 
 ## Current scope / next polish
 
-The generated world is a playable low-poly blockout, not a finished art pass. It still needs custom meshes, terrain detailing, music, sound effects, particles, world-specific shop/sell stations, more quests, balancing, and full in-Studio playtesting. Pets and eggs are deliberately excluded.
+The generated world now has a more complete low-poly art blockout and a physical starter gum-shop kiosk, but it still needs custom meshes, terrain detailing, music, sound effects, particles, world-specific shop/sell stations, more quests, balancing, and full in-Studio playtesting. Pets and eggs are deliberately excluded.
