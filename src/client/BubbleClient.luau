@@ -1,29 +1,34 @@
+--!strict
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
-local blowEvent = remotes:WaitForChild("BlowBubble")
-local syncBubbleEvent = remotes:WaitForChild("SyncBubble")
+local blowEvent = remotes:WaitForChild("BlowBubble") :: RemoteEvent
+local syncBubbleEvent = remotes:WaitForChild("SyncBubble") :: RemoteEvent
 
-local bubblesByUser = {}
+local bubblesByUser: {[number]: BasePart} = {}
 local baseJumpPower = 50
-local boundHumanoids = {}
+local currentHumanoid: Humanoid? = nil
+local clickReady = true
+local insideShop = false
 
-local function setVisualBubble(targetPlayer, amount, color)
-	local char = targetPlayer.Character
-	local head = char and char:FindFirstChild("Head")
-	if not head then return end
+local function setVisualBubble(targetPlayer: Player, amount: number, color: Color3)
+	local character = targetPlayer.Character
+	local head = character and character:FindFirstChild("Head")
+	local userId = targetPlayer.UserId
+	local part = bubblesByUser[userId]
 
-	local part = bubblesByUser[targetPlayer.UserId]
+	if part and (not part.Parent or part.Parent ~= character) then
+		part:Destroy()
+		part = nil
+		bubblesByUser[userId] = nil
+	end
 
-	if amount <= 0 then
-		if part then
-			part:Destroy()
-			bubblesByUser[targetPlayer.UserId] = nil
-		end
+	if amount <= 0 or not head or not head:IsA("BasePart") then
+		if part then part:Destroy() end
+		bubblesByUser[userId] = nil
 		return
 	end
 
@@ -34,103 +39,131 @@ local function setVisualBubble(targetPlayer, amount, color)
 		part.Material = Enum.Material.SmoothPlastic
 		part.Transparency = 0.25
 		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
 		part.Massless = true
-		part.Parent = char
+		part.CastShadow = false
+		part.Anchored = false
+		part.Parent = character
 
 		local weld = Instance.new("Weld")
 		weld.Name = "BubbleWeld"
 		weld.Part0 = head
 		weld.Part1 = part
+		weld.C0 = CFrame.new(0, 0.2, -1.1)
 		weld.Parent = part
 
-		bubblesByUser[targetPlayer.UserId] = part
+		bubblesByUser[userId] = part
 	end
 
 	local radius = math.clamp(1 + math.log10(amount + 1) * 3.5, 1, 16)
-	part.Size = Vector3.new(radius, radius, radius)
+	part.Size = Vector3.one * radius
 	part.Color = color
 
 	local weld = part:FindFirstChild("BubbleWeld")
-	if weld then
+	if weld and weld:IsA("Weld") then
+		weld.Part0 = head
 		weld.C0 = CFrame.new(0, 0.2, -(radius * 0.5 + 0.6))
 	end
 end
 
 syncBubbleEvent.OnClientEvent:Connect(setVisualBubble)
 
-local function hookHumanoid(humanoid)
-	if boundHumanoids[humanoid] then return end
-	boundHumanoids[humanoid] = true
+local function updateJumpPower()
+	local humanoid = currentHumanoid
+	local stats = player:FindFirstChild("leaderstats")
+	local bubbles = stats and stats:FindFirstChild("Bubbles")
+	if not humanoid or not humanoid.Parent or not bubbles or not bubbles:IsA("IntValue") then
+		return
+	end
+
+	local amount = bubbles.Value
+	local bonus = 0
+	if amount >= 5 then
+		bonus = math.clamp((amount ^ 1.25) * 0.45, 0, 420)
+	end
+	local targetPower = baseJumpPower + bonus
+	if math.abs(humanoid.JumpPower - targetPower) > 0.1 then
+		humanoid.JumpPower = targetPower
+	end
+end
+
+local function hookCharacter(character: Model)
+	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 10)
+	if not humanoid or not humanoid:IsA("Humanoid") then return end
+
+	currentHumanoid = humanoid
 	humanoid.UseJumpPower = true
 	baseJumpPower = humanoid.JumpPower
+	updateJumpPower()
+
+	local stats = player:FindFirstChild("leaderstats") or player:WaitForChild("leaderstats", 10)
+	local bubbles = stats and stats:FindFirstChild("Bubbles")
+	if bubbles and bubbles:IsA("IntValue") then
+		bubbles:GetPropertyChangedSignal("Value"):Connect(updateJumpPower)
+	end
 end
 
 if player.Character then
-	local hum = player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then hookHumanoid(hum) end
+	task.spawn(hookCharacter, player.Character)
 end
-player.CharacterAdded:Connect(function(char)
-	local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
-	if hum then hookHumanoid(hum) end
+player.CharacterAdded:Connect(hookCharacter)
+player.CharacterRemoving:Connect(function()
+	currentHumanoid = nil
+	local part = bubblesByUser[player.UserId]
+	if part then part:Destroy() end
+	bubblesByUser[player.UserId] = nil
 end)
 
--- Надувание по ЛКМ или тапу
-local clickCooldown = false
+local function requestBlow()
+	if not clickReady then return end
+	clickReady = false
+	blowEvent:FireServer()
+	task.delay(0.08, function()
+		clickReady = true
+	end)
+end
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed or clickCooldown then return end
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		clickCooldown = true
-		blowEvent:FireServer()
-		task.wait(0.08)
-		clickCooldown = false
+	if gameProcessed then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		requestBlow()
 	end
 end)
 
-local function calcProgressiveJump(amount)
-	if amount < 5 then return 0 end
-	local raw = (amount ^ 1.25) * 0.45
-	return math.clamp(raw, 0, 420)
+local function updateShopProximity()
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local zone = workspace:FindFirstChild("ShopZone")
+	local shouldBeInside = false
+
+	if root and root:IsA("BasePart") and zone and zone:IsA("BasePart") then
+		local localPosition = zone.CFrame:PointToObjectSpace(root.Position)
+		local half = zone.Size * 0.5
+		local margin = insideShop and 6.5 or 3.5
+		shouldBeInside = math.abs(localPosition.X) <= half.X + margin
+			and math.abs(localPosition.Z) <= half.Z + margin
+			and math.abs(localPosition.Y) <= half.Y + (insideShop and 14 or 10)
+	end
+
+	if shouldBeInside ~= insideShop then
+		insideShop = shouldBeInside
+		player:SetAttribute("NearShopZone", insideShop)
+	end
 end
 
--- Оповещение UI о входе/выходе из ShopZone
-local shopZone = workspace:FindFirstChild("ShopZone")
-local insideShop = false
-
-RunService.Heartbeat:Connect(function()
-	local char = player.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	local leaderstats = player:FindFirstChild("leaderstats")
-	local bubblesVal = leaderstats and leaderstats:FindFirstChild("Bubbles")
-
-	if hum and bubblesVal then
-		hookHumanoid(hum)
-		hum.UseJumpPower = true
-		hum.JumpPower = baseJumpPower + calcProgressiveJump(bubblesVal.Value)
+-- A small fixed interval is cheaper than doing the same work every rendered frame.
+task.spawn(function()
+	while player.Parent do
+		updateShopProximity()
+		updateJumpPower()
+		task.wait(0.15)
 	end
+end)
 
-	if not shopZone or not shopZone.Parent then
-		shopZone = workspace:FindFirstChild("ShopZone")
-	end
-
-	if root and shopZone and shopZone:IsA("BasePart") then
-		local maxExtent = math.max(shopZone.Size.X, shopZone.Size.Z) * 0.5
-		local enterRadius = maxExtent + 3.5
-		local exitRadius = maxExtent + 6.5
-
-		local flatPos = Vector3.new(root.Position.X, shopZone.Position.Y, root.Position.Z)
-		local dist = (flatPos - shopZone.Position).Magnitude
-		local heightDiff = math.abs(root.Position.Y - shopZone.Position.Y)
-
-		if not insideShop and dist <= enterRadius and heightDiff <= 10 then
-			insideShop = true
-			player:SetAttribute("NearShopZone", true)
-		elseif insideShop and (dist > exitRadius or heightDiff > 14) then
-			insideShop = false
-			player:SetAttribute("NearShopZone", false)
-		end
-	elseif insideShop then
-		insideShop = false
-		player:SetAttribute("NearShopZone", false)
-	end
+Players.PlayerRemoving:Connect(function(leavingPlayer)
+	local part = bubblesByUser[leavingPlayer.UserId]
+	if part then part:Destroy() end
+	bubblesByUser[leavingPlayer.UserId] = nil
 end)
